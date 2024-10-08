@@ -46,8 +46,8 @@ BOOL DBExcuteSQL();
 
 
 // DB관련 변수///////////////////////////////////////////////
-TCHAR ID[10] = "kjyukman";
-TCHAR PWD[10] = "";
+TCHAR ID[10] = "commonPC";
+TCHAR PWD[10] = "PC123";
 SQLHENV hEnv;
 SQLHDBC hDbc;
 SQLHSTMT hStmt;
