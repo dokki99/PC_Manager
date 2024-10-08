@@ -110,7 +110,7 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR IpszCmd
 
 	WndClass.cbClsExtra = 0;
 	WndClass.cbWndExtra = 0;
-	WndClass.hbrBackground = CreateSolidBrush(RGB(222, 225, 218));
+	WndClass.hbrBackground = CreateSolidBrush(RGB(47, 102, 144));
 	WndClass.hCursor = LoadCursor(NULL, IDC_ARROW);
 	WndClass.hIcon = LoadIcon(NULL, IDI_ASTERISK);
 	WndClass.hInstance = hInstance;
