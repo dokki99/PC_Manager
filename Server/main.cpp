@@ -1,4 +1,5 @@
 #include <windows.h>
+#include <stdio.h>
 #include <sql.h>
 #include <sqlext.h>
 #include <commctrl.h>
@@ -41,7 +42,7 @@ HWND hToolBar;		// 툴바 핸들
 BOOL DBConnect();
 void DBDisconnect();
 BOOL DBExcuteSQL();
-
+BOOL Load_Stock_Data();
 /////////////////////////////////////////////////////////////
 
 
@@ -95,6 +96,11 @@ TCHAR buf[buflen];
 
 /////////////////////////////////////////////////////////////
 
+// 리스트 뷰 관련 변수///////////////////////////////////////
+HWND Stock_I_List;
+
+/////////////////////////////////////////////////////////////
+
 
 int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR IpszCmdParam, int nCmdShow) {
 
@@ -135,6 +141,9 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR IpszCmd
 
 }
 
+/*--------------------------------------------------------
+ Init_Wnd: 윈도우 초기설정
+--------------------------------------------------------*/
 void Init_Wnd(WNDCLASS* Wnd, int Proc_No) {
 	if(Proc_No > 3){
 		MessageBox(hWndMain, "윈도우 초기화 오류!", "알림", MB_OK);
@@ -238,8 +247,42 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT iMessage, WPARAM wParam, LPARAM lParam)
  Stock_Info_Proc: 재고정보 프로시저
 --------------------------------------------------------*/
 LRESULT CALLBACK Stock_Info_Proc(HWND hWnd, UINT iMessage, WPARAM wParam, LPARAM lParam) {
+	LVCOLUMN COL;
 	switch (iMessage) {
 	case WM_CREATE:
+		Stock_I_List = CreateWindow(WC_LISTVIEW, NULL, WS_CHILD | WS_VISIBLE | WS_BORDER | LVS_REPORT, 20, 20, 800, 400, hWnd, NULL, g_hInst, NULL);
+		ListView_SetExtendedListViewStyle(Stock_I_List, LVS_EX_FULLROWSELECT | LVS_EX_GRIDLINES);
+
+		COL.mask = LVCF_FMT | LVCF_WIDTH | LVCF_TEXT | LVCF_SUBITEM;
+		COL.fmt = LVCFMT_LEFT;
+		COL.cx = 130;
+
+		COL.pszText = (LPSTR)"상품코드";    //첫 번째 헤더
+		COL.iSubItem = 0;
+		SendMessage(Stock_I_List, LVM_INSERTCOLUMN, 0, (LPARAM)&COL);
+
+		COL.pszText = (LPSTR)"상품명";    //두 번째 헤더
+		COL.iSubItem = 1;
+		SendMessage(Stock_I_List, LVM_INSERTCOLUMN, 1, (LPARAM)&COL);
+
+		COL.pszText = (LPSTR)"가격";    //세 번째 헤더
+		COL.iSubItem = 2;
+		SendMessage(Stock_I_List, LVM_INSERTCOLUMN, 2, (LPARAM)&COL);
+
+		COL.pszText = (LPSTR)"수량";    //네 번째 헤더
+		COL.iSubItem = 3;
+		SendMessage(Stock_I_List, LVM_INSERTCOLUMN, 3, (LPARAM)&COL);
+
+		COL.pszText = (LPSTR)"품목";    //다섯 번째 헤더
+		COL.iSubItem = 4;
+		SendMessage(Stock_I_List, LVM_INSERTCOLUMN, 4, (LPARAM)&COL);
+
+		COL.pszText = (LPSTR)"마진률";    //여섯 번째 헤더
+		COL.iSubItem = 5;
+		SendMessage(Stock_I_List, LVM_INSERTCOLUMN, 5, (LPARAM)&COL);
+
+		Load_Stock_Data();
+
 		return 0;
 	case WM_DESTROY:
 		break;
@@ -332,35 +375,85 @@ BOOL DBExcuteSQL() {
 	SQLLEN I_S_Code, I_S_Name, I_S_Category, I_S_Price, I_S_Amount, I_S_Margin;
 
 	// 화면 출력을 위한 변수들
-	int y = 1;
-	HDC hdc;
-	int arTab[2] = { 200,400 };
 	TCHAR str[255];
 
 	// 결과를 돌려받기 위해 바인딩한다.
 	SQLBindCol(hStmt, 1, SQL_C_CHAR, S_Code, sizeof(S_Code), &I_S_Code);
 	SQLBindCol(hStmt, 2, SQL_C_CHAR, S_Name, sizeof(S_Name), &I_S_Name);
-	SQLBindCol(hStmt, 3, SQL_C_CHAR, S_Category, sizeof(S_Category), &I_S_Category);
-	SQLBindCol(hStmt, 4, SQL_C_ULONG, &S_Price, 0, &I_S_Price);
-	SQLBindCol(hStmt, 5, SQL_C_ULONG, &S_Amount, 0, &I_S_Amount);
+	SQLBindCol(hStmt, 3, SQL_C_ULONG, &S_Price, 0, &I_S_Price);
+	SQLBindCol(hStmt, 4, SQL_C_ULONG, &S_Amount, 0, &I_S_Amount);
+	SQLBindCol(hStmt, 5, SQL_C_CHAR, S_Category, sizeof(S_Category), &I_S_Category);
 	SQLBindCol(hStmt, 6, SQL_C_ULONG, &S_Margin, 0, &I_S_Margin);
 
 	// SQL문을 실행한다
-	if (SQLExecDirect(hStmt, (SQLCHAR*)"select S_Code, S_Name, S_Category, S_Price, S_Amount, S_Margin from dbo.Stock_Info", SQL_NTS) != SQL_SUCCESS) return FALSE;
+	if (SQLExecDirect(hStmt, (SQLCHAR*)"select S_Code, S_Name, S_Price, S_Amount,S_Category, S_Margin from dbo.Stock_Info", SQL_NTS) != SQL_SUCCESS) return FALSE;
 
 	// 읽어온 데이터 출력
-	hdc = GetDC(hWndMain);
 	while (SQLFetch(hStmt) != SQL_NO_DATA) {
 		wsprintf(str, "이름:%s\t가격:%d", S_Name, S_Price);
-		MessageBox(hWndMain, str, "", MB_OK);
-	}
 
-	ReleaseDC(hWndMain, hdc);
+	}
 
 	if (hStmt) SQLCloseCursor(hStmt);
 	return TRUE;
 }
 
+/*--------------------------------------------------------
+ Load_Stock_Data(): 재고정보 가져오기
+--------------------------------------------------------*/
+BOOL Load_Stock_Data() {
+	LVITEM LI;
+	SQLCHAR S_Code[30], S_Name[30], S_Category[30];
+	int S_Price, S_Amount;
+	double S_Margin;
+	SQLLEN I_S_Code, I_S_Name, I_S_Category, I_S_Price, I_S_Amount, I_S_Margin;
+	TCHAR Price[100], Amount[100], Margin[100];
+
+	SQLBindCol(hStmt, 1, SQL_C_CHAR, S_Code, sizeof(S_Code), &I_S_Code);
+	SQLBindCol(hStmt, 2, SQL_C_CHAR, S_Name, sizeof(S_Name), &I_S_Name);
+	SQLBindCol(hStmt, 3, SQL_C_ULONG, &S_Price, 0, &I_S_Price);
+	SQLBindCol(hStmt, 4, SQL_C_ULONG, &S_Amount, 0, &I_S_Amount);
+	SQLBindCol(hStmt, 5, SQL_C_CHAR, S_Category, sizeof(S_Category), &I_S_Category);
+	SQLBindCol(hStmt, 6, SQL_C_DOUBLE, &S_Margin, 0, &I_S_Margin);
+
+	if (SQLExecDirect(hStmt, (SQLCHAR*)"select S_Code, S_Name, S_Price, S_Amount, S_Category ,S_Margin from dbo.Stock_Info", SQL_NTS) != SQL_SUCCESS) return FALSE;
+
+	LI.mask = LVIF_TEXT;
+
+	while (SQLFetch(hStmt) != SQL_NO_DATA) {
+		//첫번째아이템
+		LI.iItem = 0;
+		LI.iSubItem = 0;
+		LI.pszText = (LPSTR)S_Code;
+		SendMessage(Stock_I_List, LVM_INSERTITEM, 0, (LPARAM)&LI);
+
+		LI.iSubItem = 1;
+		LI.pszText = (LPSTR)S_Name;
+		SendMessage(Stock_I_List, LVM_SETITEM, 0, (LPARAM)&LI);
+
+		LI.iSubItem = 2;
+		wsprintf(Price, "%d", S_Price);
+		LI.pszText = Price;
+		SendMessage(Stock_I_List, LVM_SETITEM, 0, (LPARAM)&LI);
+
+		LI.iSubItem = 3;
+		wsprintf(Amount, "%d", S_Amount);
+		LI.pszText = Amount;
+		SendMessage(Stock_I_List, LVM_SETITEM, 0, (LPARAM)&LI);
+
+		LI.iSubItem = 4;
+		LI.pszText = (LPSTR)S_Category;
+		SendMessage(Stock_I_List, LVM_SETITEM, 0, (LPARAM)&LI);
+
+		LI.iSubItem = 5;
+		sprintf_s(Margin, "%.2f(%%)", S_Margin);
+		LI.pszText = Margin;
+		SendMessage(Stock_I_List, LVM_SETITEM, 0, (LPARAM)&LI);
+	}
+
+	if (hStmt) SQLCloseCursor(hStmt);
+	return TRUE;
+}
 
 /*--------------------------------------------------------
  create(): 소켓 구조체 할당
