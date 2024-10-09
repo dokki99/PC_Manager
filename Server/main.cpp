@@ -42,7 +42,7 @@ HWND hToolBar;		// 툴바 핸들
 BOOL DBConnect();
 void DBDisconnect();
 BOOL DBExcuteSQL();
-
+BOOL Load_Stock_Data();
 /////////////////////////////////////////////////////////////
 
 
