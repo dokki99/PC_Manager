@@ -41,6 +41,9 @@ BOOL DBConnect();
 void DBDisconnect();
 BOOL DBExcuteSQL();
 BOOL Load_Stock_Data();
+BOOL Load_Revenue_Data();
+BOOL Load_Employee_Data();
+BOOL Load_Customer_Data();
 /////////////////////////////////////////////////////////////
 
 
@@ -95,7 +98,11 @@ TCHAR buf[buflen];
 /////////////////////////////////////////////////////////////
 
 // 리스트 뷰 관련 변수///////////////////////////////////////
+
 HWND Stock_I_List;
+HWND Revenue_I_List;
+HWND Employee_I_List;
+HWND Customer_I_List;
 
 /////////////////////////////////////////////////////////////
 
@@ -292,8 +299,38 @@ LRESULT CALLBACK Stock_Info_Proc(HWND hWnd, UINT iMessage, WPARAM wParam, LPARAM
  Revenue_Info_Proc: 매출정보 프로시저
 --------------------------------------------------------*/
 LRESULT CALLBACK Revenue_Info_Proc(HWND hWnd, UINT iMessage, WPARAM wParam, LPARAM lParam) {
+	LVCOLUMN COL;
 	switch (iMessage) {
 	case WM_CREATE:
+		Revenue_I_List = CreateWindow(WC_LISTVIEW, NULL, WS_CHILD | WS_VISIBLE | WS_BORDER | LVS_REPORT, 20, 20, 800, 400, hWnd, NULL, g_hInst, NULL);
+		ListView_SetExtendedListViewStyle(Revenue_I_List, LVS_EX_FULLROWSELECT | LVS_EX_GRIDLINES);
+
+		COL.mask = LVCF_FMT | LVCF_WIDTH | LVCF_TEXT | LVCF_SUBITEM;
+		COL.fmt = LVCFMT_LEFT;
+		COL.cx = 130;
+
+		COL.pszText = (LPSTR)"번호";    //첫 번째 헤더
+		COL.iSubItem = 0;
+		SendMessage(Revenue_I_List, LVM_INSERTCOLUMN, 0, (LPARAM)&COL);
+
+		COL.pszText = (LPSTR)"상품코드";    //두 번째 헤더
+		COL.iSubItem = 1;
+		SendMessage(Revenue_I_List, LVM_INSERTCOLUMN, 1, (LPARAM)&COL);
+
+		COL.pszText = (LPSTR)"직원";    //세 번째 헤더
+		COL.iSubItem = 2;
+		SendMessage(Revenue_I_List, LVM_INSERTCOLUMN, 2, (LPARAM)&COL);
+
+		COL.pszText = (LPSTR)"판매날짜";    //네 번째 헤더
+		COL.iSubItem = 3;
+		SendMessage(Revenue_I_List, LVM_INSERTCOLUMN, 3, (LPARAM)&COL);
+
+		COL.pszText = (LPSTR)"판매수량";    //다섯 번째 헤더
+		COL.iSubItem = 4;
+		SendMessage(Revenue_I_List, LVM_INSERTCOLUMN, 4, (LPARAM)&COL);
+
+		Load_Revenue_Data();
+
 		return 0;
 	case WM_DESTROY:
 		break;
@@ -305,8 +342,34 @@ LRESULT CALLBACK Revenue_Info_Proc(HWND hWnd, UINT iMessage, WPARAM wParam, LPAR
  Employee_Info_Proc: 직원정보 프로시저
 --------------------------------------------------------*/
 LRESULT CALLBACK Employee_Info_Proc(HWND hWnd, UINT iMessage, WPARAM wParam, LPARAM lParam){
+	LVCOLUMN COL;
 	switch (iMessage) {
 	case WM_CREATE:
+		Employee_I_List = CreateWindow(WC_LISTVIEW, NULL, WS_CHILD | WS_VISIBLE | WS_BORDER | LVS_REPORT, 20, 20, 800, 400, hWnd, NULL, g_hInst, NULL);
+		ListView_SetExtendedListViewStyle(Employee_I_List, LVS_EX_FULLROWSELECT | LVS_EX_GRIDLINES);
+
+		COL.mask = LVCF_FMT | LVCF_WIDTH | LVCF_TEXT | LVCF_SUBITEM;
+		COL.fmt = LVCFMT_LEFT;
+		COL.cx = 130;
+
+		COL.pszText = (LPSTR)"아이디";    //첫 번째 헤더
+		COL.iSubItem = 0;
+		SendMessage(Employee_I_List, LVM_INSERTCOLUMN, 0, (LPARAM)&COL);
+
+		COL.pszText = (LPSTR)"이름";    //두 번째 헤더
+		COL.iSubItem = 1;
+		SendMessage(Employee_I_List, LVM_INSERTCOLUMN, 1, (LPARAM)&COL);
+
+		COL.pszText = (LPSTR)"비밀번호";    //세 번째 헤더
+		COL.iSubItem = 2;
+		SendMessage(Employee_I_List, LVM_INSERTCOLUMN, 2, (LPARAM)&COL);
+
+		COL.pszText = (LPSTR)"권한";    //네 번째 헤더
+		COL.iSubItem = 3;
+		SendMessage(Employee_I_List, LVM_INSERTCOLUMN, 3, (LPARAM)&COL);
+		
+		Load_Employee_Data();
+		
 		return 0;
 	case WM_DESTROY:
 		break;
@@ -400,6 +463,164 @@ BOOL DBExcuteSQL() {
  Load_Stock_Data(): 재고정보 가져오기
 --------------------------------------------------------*/
 BOOL Load_Stock_Data() {
+	LVITEM LI;
+	SQLCHAR S_Code[30], S_Name[30], S_Category[30];
+	int S_Price, S_Amount;
+	double S_Margin;
+	SQLLEN I_S_Code, I_S_Name, I_S_Category, I_S_Price, I_S_Amount, I_S_Margin;
+	TCHAR Price[100], Amount[100], Margin[100];
+
+	SQLBindCol(hStmt, 1, SQL_C_CHAR, S_Code, sizeof(S_Code), &I_S_Code);
+	SQLBindCol(hStmt, 2, SQL_C_CHAR, S_Name, sizeof(S_Name), &I_S_Name);
+	SQLBindCol(hStmt, 3, SQL_C_ULONG, &S_Price, 0, &I_S_Price);
+	SQLBindCol(hStmt, 4, SQL_C_ULONG, &S_Amount, 0, &I_S_Amount);
+	SQLBindCol(hStmt, 5, SQL_C_CHAR, S_Category, sizeof(S_Category), &I_S_Category);
+	SQLBindCol(hStmt, 6, SQL_C_DOUBLE, &S_Margin, 0, &I_S_Margin);
+
+	if (SQLExecDirect(hStmt, (SQLCHAR*)"select S_Code, S_Name, S_Price, S_Amount, S_Category ,S_Margin from dbo.Stock_Info", SQL_NTS) != SQL_SUCCESS) return FALSE;
+
+	LI.mask = LVIF_TEXT;
+
+	while (SQLFetch(hStmt) != SQL_NO_DATA) {
+		// 아이템
+		LI.iItem = 0;
+		LI.iSubItem = 0;
+		LI.pszText = (LPSTR)S_Code;
+		SendMessage(Stock_I_List, LVM_INSERTITEM, 0, (LPARAM)&LI);
+
+		LI.iSubItem = 1;
+		LI.pszText = (LPSTR)S_Name;
+		SendMessage(Stock_I_List, LVM_SETITEM, 0, (LPARAM)&LI);
+
+		LI.iSubItem = 2;
+		wsprintf(Price, "%d", S_Price);
+		LI.pszText = Price;
+		SendMessage(Stock_I_List, LVM_SETITEM, 0, (LPARAM)&LI);
+
+		LI.iSubItem = 3;
+		wsprintf(Amount, "%d", S_Amount);
+		LI.pszText = Amount;
+		SendMessage(Stock_I_List, LVM_SETITEM, 0, (LPARAM)&LI);
+
+		LI.iSubItem = 4;
+		LI.pszText = (LPSTR)S_Category;
+		SendMessage(Stock_I_List, LVM_SETITEM, 0, (LPARAM)&LI);
+
+		LI.iSubItem = 5;
+		sprintf_s(Margin, "%.2f(%%)", S_Margin);
+		LI.pszText = Margin;
+		SendMessage(Stock_I_List, LVM_SETITEM, 0, (LPARAM)&LI);
+	}
+
+	if (hStmt) SQLCloseCursor(hStmt);
+	return TRUE;
+}
+
+/*--------------------------------------------------------
+ Load_Revenue_Data(): 매출정보 가져오기
+--------------------------------------------------------*/
+BOOL Load_Revenue_Data() {
+	LVITEM LI;
+	SQLCHAR S_Code[30], E_ID[30];
+	TIMESTAMP_STRUCT R_Date;
+	int R_No, R_Amount;
+	SQLLEN I_R_No, I_S_Code, I_E_ID, I_R_Date, I_R_Amount;
+	TCHAR No[100], Amount[100], Date[100];
+
+	SQLBindCol(hStmt, 1, SQL_C_ULONG, &R_No, 0, &I_R_No);
+	SQLBindCol(hStmt, 2, SQL_C_CHAR, S_Code, sizeof(S_Code), &I_S_Code);
+	SQLBindCol(hStmt, 3, SQL_C_CHAR, E_ID, sizeof(E_ID), &I_E_ID);
+	SQLBindCol(hStmt, 4, SQL_C_TYPE_TIMESTAMP, &R_Date, sizeof(R_Date), &I_R_Date);
+	SQLBindCol(hStmt, 5, SQL_C_ULONG, &R_Amount, 0, &I_R_Amount);
+
+	if (SQLExecDirect(hStmt, (SQLCHAR*)"select R_No, S_Code, E_ID, R_Date, R_Amount from dbo.Revenue_Info", SQL_NTS) != SQL_SUCCESS) return FALSE;
+
+	LI.mask = LVIF_TEXT;
+
+	while (SQLFetch(hStmt) != SQL_NO_DATA) {
+		// 아이템
+		LI.iItem = 0;
+		LI.iSubItem = 0;
+		wsprintf(No, "%d", R_No);
+		LI.pszText = No;
+		SendMessage(Revenue_I_List, LVM_INSERTITEM, 0, (LPARAM)&LI);
+
+		LI.iSubItem = 1;
+		LI.pszText = (LPSTR)S_Code;
+		SendMessage(Revenue_I_List, LVM_SETITEM, 0, (LPARAM)&LI);
+
+		LI.iSubItem = 2;
+		LI.pszText = (LPSTR)E_ID;
+		SendMessage(Revenue_I_List, LVM_SETITEM, 0, (LPARAM)&LI);
+
+		LI.iSubItem = 3;
+		wsprintf(Date, "%d-%d-%d %d:%d:%d", R_Date.year, R_Date.month, R_Date.day, R_Date.hour, R_Date.minute, R_Date.second);
+		LI.pszText = Date;
+		SendMessage(Revenue_I_List, LVM_SETITEM, 0, (LPARAM)&LI);
+
+		LI.iSubItem = 4;
+		wsprintf(Amount, "%d", R_Amount);
+		LI.pszText = Amount;
+		SendMessage(Revenue_I_List, LVM_SETITEM, 0, (LPARAM)&LI);
+	}
+
+	if (hStmt) SQLCloseCursor(hStmt);
+	return TRUE;
+}
+
+/*--------------------------------------------------------
+ Load_Employee_Data(): 직원정보 가져오기
+--------------------------------------------------------*/
+BOOL Load_Employee_Data(){
+	LVITEM LI;
+	SQLCHAR E_ID[30], E_Name[30], E_PWD[30], E_Permission;
+	SQLLEN I_E_ID, I_E_Name, I_E_PWD, I_E_Permission;
+	TCHAR Permission[30];
+
+	SQLBindCol(hStmt, 1, SQL_C_CHAR, E_ID, sizeof(E_ID), &I_E_ID);
+	SQLBindCol(hStmt, 2, SQL_C_CHAR, E_Name, sizeof(E_Name), &I_E_Name);
+	SQLBindCol(hStmt, 3, SQL_C_CHAR, E_PWD, sizeof(E_PWD), &I_E_PWD);
+	SQLBindCol(hStmt, 4, SQL_C_BIT, &E_Permission, sizeof(E_Permission), &I_E_Permission);
+
+	if (SQLExecDirect(hStmt, (SQLCHAR*)"select E_ID, E_Name, E_PWD, E_Permission from dbo.Employee_Info", SQL_NTS) != SQL_SUCCESS) return FALSE;
+
+	LI.mask = LVIF_TEXT;
+
+	while (SQLFetch(hStmt) != SQL_NO_DATA) {
+		// 아이템
+		LI.iItem = 0;
+		LI.iSubItem = 0;
+		LI.pszText = (LPSTR)E_ID;
+		SendMessage(Employee_I_List, LVM_INSERTITEM, 0, (LPARAM)&LI);
+
+		LI.iSubItem = 1;
+		LI.pszText = (LPSTR)E_Name;
+		SendMessage(Employee_I_List, LVM_SETITEM, 0, (LPARAM)&LI);
+
+		LI.iSubItem = 2;
+		LI.pszText = (LPSTR)E_PWD;
+		SendMessage(Employee_I_List, LVM_SETITEM, 0, (LPARAM)&LI);
+
+		LI.iSubItem = 3;
+		wsprintf(Permission, "%d", E_Permission);
+		if (lstrcmp(Permission, "1") == 0) {
+			LI.pszText = (LPSTR)"True";
+		}
+		else {
+			LI.pszText = (LPSTR)"False";
+		}
+		SendMessage(Employee_I_List, LVM_SETITEM, 0, (LPARAM)&LI);
+	}
+
+	if (hStmt) SQLCloseCursor(hStmt);
+	return TRUE;
+}
+
+/*--------------------------------------------------------
+ Load_Customer_Data(): 회원정보 가져오기
+--------------------------------------------------------*/
+BOOL Load_Customer_Data() {
+	// 여기는 바꿔야됩니다.
 	LVITEM LI;
 	SQLCHAR S_Code[30], S_Name[30], S_Category[30];
 	int S_Price, S_Amount;
