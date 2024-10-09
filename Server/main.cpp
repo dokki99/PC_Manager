@@ -4,8 +4,6 @@
 #include <commctrl.h>
 #include "resource.h"
 
-#define ID_TOOLBAR 100
-
 
 // 소켓 정보 구조체
 typedef struct Client_Socket {
