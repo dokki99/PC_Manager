@@ -5,6 +5,21 @@
 #include <commctrl.h>
 #include "resource.h"
 
+// 타이머 상수 설정//////////////////////////////////////////
+typedef enum { BuffT = 1 };
+/////////////////////////////////////////////////////////////
+
+//고객 정보 구조체
+typedef struct Client_Information {
+	TCHAR Name[21];			//이름
+	TCHAR ID[21];			//ID
+	TCHAR RemainTime[8];	//남은시간(최대 999:59:59)
+}CI;
+// 좌석 정보 구조체
+typedef struct Client_Seat {
+	int state;		//좌석 상태
+	CI client;		//비트맵에 띄워질 고객 정보
+}SEAT;
 
 // 소켓 정보 구조체
 typedef struct Client_Socket {
@@ -33,7 +48,18 @@ HWND hWnd_S;		// 재고정보 화면 핸들
 HWND hWnd_R;		// 매출정보 화면 핸들
 HWND hWnd_E;		// 직원정보 화면 핸들
 HWND hWnd_C;		// 회원정보 화면 핸들
-HWND hToolBar;		// 툴바 핸들
+
+// 화면처리 관련 변수////////////////////////////////////////
+
+HBITMAP hBit;
+HIMAGELIST Image;
+/////////////////////////////////////////////////////////////
+
+// 화면처리 관련 함수////////////////////////////////////////
+
+void OnTimer();								//타이머로 버퍼링
+void DrawBitmap(HDC, int, int, HBITMAP);	//비트맵 출력
+/////////////////////////////////////////////////////////////
 
 // DB관련 함수///////////////////////////////////////////////
 
@@ -45,7 +71,6 @@ BOOL Load_Revenue_Data();
 BOOL Load_Employee_Data();
 BOOL Load_Customer_Data();
 /////////////////////////////////////////////////////////////
-
 
 // DB관련 변수///////////////////////////////////////////////
 TCHAR ID[10] = "commonPC";
@@ -150,7 +175,7 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR IpszCmd
  Init_Wnd: 윈도우 초기설정
 --------------------------------------------------------*/
 void Init_Wnd(WNDCLASS* Wnd, int Proc_No) {
-	if(Proc_No > 3){
+	if (Proc_No > 3) {
 		MessageBox(hWndMain, "윈도우 초기화 오류!", "알림", MB_OK);
 		return;
 	}
@@ -190,12 +215,16 @@ void Init_Wnd(WNDCLASS* Wnd, int Proc_No) {
  WndProc: 메인 윈도우 프로시저
 --------------------------------------------------------*/
 LRESULT CALLBACK WndProc(HWND hWnd, UINT iMessage, WPARAM wParam, LPARAM lParam) {
+	HDC hdc;
+	PAINTSTRUCT ps;
 
 	switch (iMessage) {
 	case WM_CREATE:
 		hWndMain = hWnd;
 		InitCommonControls();
 
+		Image = ImageList_LoadBitmap(g_hInst, MAKEINTRESOURCE(IDB_BITMAP1), 45, 1, RGB(255, 255, 255));		//좌석 이미지리스트 설정 
+		SetTimer(hWnd, BuffT, 50, NULL);	//버퍼링 타이머 생성
 		C_S = create();		// 소켓 구조체 생성
 
 		WNDCLASS Wnd_S;
@@ -213,7 +242,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT iMessage, WPARAM wParam, LPARAM lParam)
 		Init_Wnd(&Wnd_C, 3);
 
 		DBExcuteSQL();
-		
+
 		return 0;
 
 	case WM_COMMAND:
@@ -240,8 +269,25 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT iMessage, WPARAM wParam, LPARAM lParam)
 			break;
 		}
 		return 0;
-
+	case WM_TIMER:
+		switch (wParam) {
+		case BuffT:
+			OnTimer();
+			break;
+		}
+		return 0;
+	case WM_PAINT:
+		hdc = BeginPaint(hWnd, &ps);
+		if (hBit) {
+			DrawBitmap(hdc, 0, 0, hBit);
+		}
+		EndPaint(hWnd, &ps);
+		return 0;
 	case WM_DESTROY:
+		if (hBit) {
+			DeleteObject(hBit);
+		}
+		KillTimer(hWnd, BuffT);			//버퍼링 타이머 Kill
 		PostQuitMessage(0);
 		return 0;
 	}
@@ -390,7 +436,6 @@ LRESULT CALLBACK Customer_Info_Proc(HWND hWnd, UINT iMessage, WPARAM wParam, LPA
 	return(DefWindowProc(hWnd, iMessage, wParam, lParam));
 }
 
-
 /*--------------------------------------------------------
  DBConnect(): DB 연결
 --------------------------------------------------------*/
@@ -412,7 +457,6 @@ BOOL DBConnect() {
 
 	return TRUE;
 }
-
 
 /*--------------------------------------------------------
  DBDisConnect(): DB 해제
@@ -816,4 +860,59 @@ void delsock(SOCKET S) {
 		}
 		free(P);
 	}
+}
+
+/*--------------------------------------------------------
+ DrawBitmap(HDC, int , int , HBITMAP ): 지정좌표에 비트맵 출력
+--------------------------------------------------------*/
+void DrawBitmap(HDC hdc, int x, int y, HBITMAP hBit) {
+	HDC MemDC;
+	HBITMAP OldBitmap;
+	int bx, by;
+	BITMAP bit;
+
+	MemDC = CreateCompatibleDC(hdc);
+	OldBitmap = (HBITMAP)SelectObject(MemDC, hBit);
+
+	GetObject(hBit, sizeof(BITMAP), &bit);
+	bx = bit.bmWidth;
+	by = bit.bmHeight;
+
+	BitBlt(hdc, x, y, bx, by, MemDC, 0, 0, SRCCOPY);
+
+	SelectObject(MemDC, OldBitmap);
+	DeleteDC(MemDC);
+}
+
+/*--------------------------------------------------------
+ OnTimer(): WndProc에서 화면 출력하며 동작
+--------------------------------------------------------*/
+void OnTimer() {
+	RECT crt;
+	HDC hdc, hMemDC;
+	HBITMAP OldBit;
+	static int i = 0;
+
+	GetClientRect(hWndMain, &crt);
+	hdc = GetDC(hWndMain);
+
+	if (hBit == NULL) {
+		hBit = CreateCompatibleBitmap(hdc, crt.right, crt.bottom);
+	}
+	hMemDC = CreateCompatibleDC(hdc);
+	OldBit = (HBITMAP)SelectObject(hMemDC, hBit);
+
+	FillRect(hMemDC, &crt, CreateSolidBrush(RGB(218, 220, 214)));
+	/*
+		좌석 비트맵 출력할 코드
+	*/
+	Ellipse(hMemDC, 100, 100, 200, 200);
+
+
+
+	SelectObject(hMemDC, OldBit);
+	DeleteDC(hMemDC);
+	ReleaseDC(hWndMain, hdc);
+
+	InvalidateRect(hWndMain, NULL, FALSE);
 }
