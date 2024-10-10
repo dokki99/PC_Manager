@@ -3,6 +3,9 @@
 ##
 ## Get latest from https://github.com/github/gitignore/blob/master/VisualStudio.gitignore
 
+# Log files
+*.tlog
+
 # User-specific files
 *.rsuser
 *.suo
@@ -12,6 +15,7 @@
 
 # User-specific files (MonoDevelop/Xamarin Studio)
 *.userprefs
+
 
 # Mono auto generated files
 mono_crash.*
@@ -363,4 +367,8 @@ MigrationBackup/
 
 # Fody - auto-generated XML schema
 FodyWeavers.xsd
-/Server/.vs/Server/v17/.suo
+
+.vs/
+x64/
+Server/.vs/
+Server/x64/
