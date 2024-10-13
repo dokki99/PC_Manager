@@ -35,6 +35,7 @@ LRESULT CALLBACK Stock_Info_Proc(HWND, UINT, WPARAM, LPARAM);
 LRESULT CALLBACK Revenue_Info_Proc(HWND, UINT, WPARAM, LPARAM);
 LRESULT CALLBACK Employee_Info_Proc(HWND, UINT, WPARAM, LPARAM);
 LRESULT CALLBACK Customer_Info_Proc(HWND, UINT, WPARAM, LPARAM);
+LRESULT CALLBACK Work_Info_Proc(HWND, UINT, WPARAM, LPARAM);
 
 
 HINSTANCE g_hInst;
@@ -43,11 +44,14 @@ LPCTSTR S_Class = TEXT("재고");
 LPCTSTR R_Class = TEXT("매출");
 LPCTSTR E_Class = TEXT("직원");
 LPCTSTR C_Class = TEXT("회원");
+LPCTSTR W_Class = TEXT("근무");
+
 HWND hWndMain;		// 메인 화면 핸들
 HWND hWnd_S;		// 재고정보 화면 핸들
 HWND hWnd_R;		// 매출정보 화면 핸들
 HWND hWnd_E;		// 직원정보 화면 핸들
 HWND hWnd_C;		// 회원정보 화면 핸들
+HWND hWnd_W;		// 근무정보 화면 핸들
 
 // 화면처리 관련 변수////////////////////////////////////////
 
@@ -70,6 +74,7 @@ BOOL Load_Stock_Data();
 BOOL Load_Revenue_Data();
 BOOL Load_Employee_Data();
 BOOL Load_Customer_Data();
+BOOL Load_Work_Data();
 /////////////////////////////////////////////////////////////
 
 // DB관련 변수///////////////////////////////////////////////
@@ -124,10 +129,11 @@ TCHAR buf[buflen];
 
 // 리스트 뷰 관련 변수///////////////////////////////////////
 
-HWND Stock_I_List;
-HWND Revenue_I_List;
-HWND Employee_I_List;
-HWND Customer_I_List;
+HWND Stock_I_List;		// 재고 리스트뷰
+HWND Revenue_I_List;	// 매출 리스트뷰
+HWND Employee_I_List;	// 직원 리스트뷰
+HWND Customer_I_List;	// 회원 리스트뷰
+HWND Work_I_List;		// 근무 리스트뷰
 
 /////////////////////////////////////////////////////////////
 
@@ -175,7 +181,7 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR IpszCmd
  Init_Wnd: 윈도우 초기설정
 --------------------------------------------------------*/
 void Init_Wnd(WNDCLASS* Wnd, int Proc_No) {
-	if (Proc_No > 3) {
+	if (Proc_No > 4) {
 		MessageBox(hWndMain, "윈도우 초기화 오류!", "알림", MB_OK);
 		return;
 	}
@@ -204,6 +210,9 @@ void Init_Wnd(WNDCLASS* Wnd, int Proc_No) {
 		Wnd->lpfnWndProc = Customer_Info_Proc;
 		Wnd->lpszClassName = C_Class;
 		break;
+	case 4:
+		Wnd->lpfnWndProc = Work_Info_Proc;
+		Wnd->lpszClassName = W_Class;
 	}
 	Wnd->lpszMenuName = NULL;
 	Wnd->style = CS_HREDRAW | CS_VREDRAW;
@@ -232,16 +241,18 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT iMessage, WPARAM wParam, LPARAM lParam)
 		WNDCLASS Wnd_E;
 		WNDCLASS Wnd_C;
 
-		// 제품윈도우 설정
+		// 제품 윈도우 설정
 		Init_Wnd(&Wnd_S, 0);
-		// 매출윈도우 설정
+		// 매출 윈도우 설정
 		Init_Wnd(&Wnd_R, 1);
-		// 직원윈도우 설정
+		// 직원 윈도우 설정
 		Init_Wnd(&Wnd_E, 2);
-		// 회원윈도우 설정
+		// 회원 윈도우 설정
 		Init_Wnd(&Wnd_C, 3);
+		// 근무기록 윈도우 설정
+		Init_Wnd(&Wnd_C, 4);
 
-		DBExcuteSQL();
+		DBExcuteSQL();		// 나중에 수정 개선할 함수입니다.
 
 		return 0;
 
@@ -266,6 +277,10 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT iMessage, WPARAM wParam, LPARAM lParam)
 		case ID_C_INFO:		// 회원(Customer)정보 오픈
 			hWnd_C = CreateWindow(C_Class, C_Class, WS_VISIBLE | WS_OVERLAPPEDWINDOW, CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT, NULL, (HMENU)NULL, g_hInst, NULL);
 			ShowWindow(hWnd_C, SW_SHOW);
+			break;
+		case ID_W_INFO:		// 근무(Work)정보 오픈
+			hWnd_W = CreateWindow(W_Class, W_Class, WS_VISIBLE | WS_OVERLAPPEDWINDOW, CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT, NULL, (HMENU)NULL, g_hInst, NULL);
+			ShowWindow(hWnd_W, SW_SHOW);
 			break;
 		}
 		return 0;
@@ -355,7 +370,7 @@ LRESULT CALLBACK Revenue_Info_Proc(HWND hWnd, UINT iMessage, WPARAM wParam, LPAR
 		COL.fmt = LVCFMT_LEFT;
 		COL.cx = 130;
 
-		COL.pszText = (LPSTR)"번호";    //첫 번째 헤더
+		COL.pszText = (LPSTR)"No";    //첫 번째 헤더
 		COL.iSubItem = 0;
 		SendMessage(Revenue_I_List, LVM_INSERTCOLUMN, 0, (LPARAM)&COL);
 
@@ -363,7 +378,7 @@ LRESULT CALLBACK Revenue_Info_Proc(HWND hWnd, UINT iMessage, WPARAM wParam, LPAR
 		COL.iSubItem = 1;
 		SendMessage(Revenue_I_List, LVM_INSERTCOLUMN, 1, (LPARAM)&COL);
 
-		COL.pszText = (LPSTR)"직원";    //세 번째 헤더
+		COL.pszText = (LPSTR)"판매직원";    //세 번째 헤더
 		COL.iSubItem = 2;
 		SendMessage(Revenue_I_List, LVM_INSERTCOLUMN, 2, (LPARAM)&COL);
 
@@ -427,8 +442,85 @@ LRESULT CALLBACK Employee_Info_Proc(HWND hWnd, UINT iMessage, WPARAM wParam, LPA
  Customer_Info_Proc: 회원정보 프로시저
 --------------------------------------------------------*/
 LRESULT CALLBACK Customer_Info_Proc(HWND hWnd, UINT iMessage, WPARAM wParam, LPARAM lParam) {
+	LVCOLUMN COL;
 	switch (iMessage) {
 	case WM_CREATE:
+		Customer_I_List = CreateWindow(WC_LISTVIEW, NULL, WS_CHILD | WS_VISIBLE | WS_BORDER | LVS_REPORT, 20, 20, 800, 400, hWnd, NULL, g_hInst, NULL);
+		ListView_SetExtendedListViewStyle(Customer_I_List, LVS_EX_FULLROWSELECT | LVS_EX_GRIDLINES);
+
+		COL.mask = LVCF_FMT | LVCF_WIDTH | LVCF_TEXT | LVCF_SUBITEM;
+		COL.fmt = LVCFMT_LEFT;
+		COL.cx = 130;
+
+		COL.pszText = (LPSTR)"아이디";		  //첫 번째 헤더
+		COL.iSubItem = 0;
+		SendMessage(Customer_I_List, LVM_INSERTCOLUMN, 0, (LPARAM)&COL);
+
+		COL.pszText = (LPSTR)"성함";		  //두 번째 헤더
+		COL.iSubItem = 1;
+		SendMessage(Customer_I_List, LVM_INSERTCOLUMN, 1, (LPARAM)&COL);
+
+		COL.pszText = (LPSTR)"비밀번호";	 //세 번째 헤더
+		COL.iSubItem = 2;
+		SendMessage(Customer_I_List, LVM_INSERTCOLUMN, 2, (LPARAM)&COL);
+
+		COL.pszText = (LPSTR)"핸드폰";		 //네 번째 헤더
+		COL.iSubItem = 3;
+		SendMessage(Customer_I_List, LVM_INSERTCOLUMN, 3, (LPARAM)&COL);
+
+		COL.pszText = (LPSTR)"주소";		 //다섯 번째 헤더
+		COL.iSubItem = 4;
+		SendMessage(Customer_I_List, LVM_INSERTCOLUMN, 4, (LPARAM)&COL);
+
+		COL.pszText = (LPSTR)"생년월일";    //여섯 번째 헤더
+		COL.iSubItem = 5;
+		SendMessage(Customer_I_List, LVM_INSERTCOLUMN, 5, (LPARAM)&COL);
+
+		COL.pszText = (LPSTR)"잔여시간";    //일곱 번째 헤더
+		COL.iSubItem = 6;
+		SendMessage(Customer_I_List, LVM_INSERTCOLUMN, 6, (LPARAM)&COL);
+
+		Load_Customer_Data();
+
+		return 0;
+	case WM_DESTROY:
+		break;
+	}
+	return(DefWindowProc(hWnd, iMessage, wParam, lParam));
+}
+
+/*--------------------------------------------------------
+ Work_Info_Proc: 근무정보 프로시저
+--------------------------------------------------------*/
+LRESULT CALLBACK Work_Info_Proc(HWND hWnd, UINT iMessage, WPARAM wParam, LPARAM lParam) {
+	LVCOLUMN COL;
+	switch (iMessage) {
+	case WM_CREATE:
+		Work_I_List = CreateWindow(WC_LISTVIEW, NULL, WS_CHILD | WS_VISIBLE | WS_BORDER | LVS_REPORT, 20, 20, 800, 400, hWnd, NULL, g_hInst, NULL);
+		ListView_SetExtendedListViewStyle(Work_I_List, LVS_EX_FULLROWSELECT | LVS_EX_GRIDLINES);
+
+		COL.mask = LVCF_FMT | LVCF_WIDTH | LVCF_TEXT | LVCF_SUBITEM;
+		COL.fmt = LVCFMT_LEFT;
+		COL.cx = 130;
+
+		COL.pszText = (LPSTR)"No.";				 //첫 번째 헤더
+		COL.iSubItem = 0;
+		SendMessage(Work_I_List, LVM_INSERTCOLUMN, 0, (LPARAM)&COL);
+
+		COL.pszText = (LPSTR)"직원 아이디";		 //두 번째 헤더
+		COL.iSubItem = 1;
+		SendMessage(Work_I_List, LVM_INSERTCOLUMN, 1, (LPARAM)&COL);
+
+		COL.pszText = (LPSTR)"출근";			//세 번째 헤더
+		COL.iSubItem = 2;
+		SendMessage(Work_I_List, LVM_INSERTCOLUMN, 2, (LPARAM)&COL);
+
+		COL.pszText = (LPSTR)"퇴근";			//네 번째 헤더
+		COL.iSubItem = 3;
+		SendMessage(Work_I_List, LVM_INSERTCOLUMN, 3, (LPARAM)&COL);
+
+		Load_Work_Data();
+
 		return 0;
 	case WM_DESTROY:
 		break;
@@ -664,54 +756,106 @@ BOOL Load_Employee_Data(){
  Load_Customer_Data(): 회원정보 가져오기
 --------------------------------------------------------*/
 BOOL Load_Customer_Data() {
-	// 여기는 바꿔야됩니다.
 	LVITEM LI;
-	SQLCHAR S_Code[30], S_Name[30], S_Category[30];
-	int S_Price, S_Amount;
-	double S_Margin;
-	SQLLEN I_S_Code, I_S_Name, I_S_Category, I_S_Price, I_S_Amount, I_S_Margin;
-	TCHAR Price[100], Amount[100], Margin[100];
+	SQLCHAR C_ID[30], C_Name[30], C_PWD[30], C_Phone[50], C_Adress[50], C_Birth[15];
+	TIMESTAMP_STRUCT C_Time;
+	SQLLEN I_C_ID, I_C_Name, I_C_PWD, I_C_Phone, I_C_Adress, I_C_Birth, I_C_Time;
+	TCHAR Date[100];
 
-	SQLBindCol(hStmt, 1, SQL_C_CHAR, S_Code, sizeof(S_Code), &I_S_Code);
-	SQLBindCol(hStmt, 2, SQL_C_CHAR, S_Name, sizeof(S_Name), &I_S_Name);
-	SQLBindCol(hStmt, 3, SQL_C_ULONG, &S_Price, 0, &I_S_Price);
-	SQLBindCol(hStmt, 4, SQL_C_ULONG, &S_Amount, 0, &I_S_Amount);
-	SQLBindCol(hStmt, 5, SQL_C_CHAR, S_Category, sizeof(S_Category), &I_S_Category);
-	SQLBindCol(hStmt, 6, SQL_C_DOUBLE, &S_Margin, 0, &I_S_Margin);
+	SQLBindCol(hStmt, 1, SQL_C_CHAR, C_ID, sizeof(C_ID), &I_C_ID);
+	SQLBindCol(hStmt, 2, SQL_C_CHAR, C_Name, sizeof(C_Name), &I_C_Name);
+	SQLBindCol(hStmt, 3, SQL_C_CHAR, C_PWD, sizeof(C_PWD), &I_C_PWD);
+	SQLBindCol(hStmt, 4, SQL_C_CHAR, C_Phone, sizeof(C_Phone), &I_C_Phone);
+	SQLBindCol(hStmt, 5, SQL_C_CHAR, C_Adress, sizeof(C_Adress), &I_C_Adress);
+	SQLBindCol(hStmt, 6, SQL_C_CHAR, C_Birth, sizeof(C_Birth), &I_C_Birth);
+	SQLBindCol(hStmt, 7, SQL_C_TYPE_TIMESTAMP, &C_Time, sizeof(C_Time), &I_C_Time);
 
-	if (SQLExecDirect(hStmt, (SQLCHAR*)"select S_Code, S_Name, S_Price, S_Amount, S_Category ,S_Margin from dbo.Stock_Info", SQL_NTS) != SQL_SUCCESS) return FALSE;
+	if (SQLExecDirect(hStmt, (SQLCHAR*)"select C_ID, C_Name, C_PWD, C_Phone, C_Adress, C_Birth, C_Time from dbo.Customer_Info", SQL_NTS) != SQL_SUCCESS) return FALSE;
 
 	LI.mask = LVIF_TEXT;
 
 	while (SQLFetch(hStmt) != SQL_NO_DATA) {
-		//첫번째아이템
+
+		// 아이템
 		LI.iItem = 0;
 		LI.iSubItem = 0;
-		LI.pszText = (LPSTR)S_Code;
-		SendMessage(Stock_I_List, LVM_INSERTITEM, 0, (LPARAM)&LI);
+		LI.pszText = (LPSTR) C_ID;
+		SendMessage(Customer_I_List, LVM_INSERTITEM, 0, (LPARAM)&LI);
 
 		LI.iSubItem = 1;
-		LI.pszText = (LPSTR)S_Name;
-		SendMessage(Stock_I_List, LVM_SETITEM, 0, (LPARAM)&LI);
+		LI.pszText = (LPSTR)C_Name;
+		SendMessage(Customer_I_List, LVM_SETITEM, 0, (LPARAM)&LI);
 
 		LI.iSubItem = 2;
-		wsprintf(Price, "%d", S_Price);
-		LI.pszText = Price;
-		SendMessage(Stock_I_List, LVM_SETITEM, 0, (LPARAM)&LI);
+		LI.pszText = (LPSTR)C_PWD;
+		SendMessage(Customer_I_List, LVM_SETITEM, 0, (LPARAM)&LI);
 
 		LI.iSubItem = 3;
-		wsprintf(Amount, "%d", S_Amount);
-		LI.pszText = Amount;
-		SendMessage(Stock_I_List, LVM_SETITEM, 0, (LPARAM)&LI);
+		LI.pszText = (LPSTR)C_Phone;
+		SendMessage(Customer_I_List, LVM_SETITEM, 0, (LPARAM)&LI);
 
 		LI.iSubItem = 4;
-		LI.pszText = (LPSTR)S_Category;
-		SendMessage(Stock_I_List, LVM_SETITEM, 0, (LPARAM)&LI);
+		LI.pszText = (LPSTR)C_Adress;
+		SendMessage(Customer_I_List, LVM_SETITEM, 0, (LPARAM)&LI);
 
 		LI.iSubItem = 5;
-		sprintf_s(Margin, "%.2f(%%)", S_Margin);
-		LI.pszText = Margin;
-		SendMessage(Stock_I_List, LVM_SETITEM, 0, (LPARAM)&LI);
+		LI.pszText = (LPSTR)C_Birth;
+		SendMessage(Customer_I_List, LVM_SETITEM, 0, (LPARAM)&LI);
+
+		LI.iSubItem = 6;
+		wsprintf(Date, "%d-%d-%d %d:%d:%d", C_Time.year, C_Time.month, C_Time.day, C_Time.hour, C_Time.minute, C_Time.second);
+		LI.pszText = Date;
+		SendMessage(Customer_I_List, LVM_SETITEM, 0, (LPARAM)&LI);
+
+	}
+
+	if (hStmt) SQLCloseCursor(hStmt);
+	return TRUE;
+}
+
+/*--------------------------------------------------------
+ Load_Work_Data(): 근무정보 가져오기
+--------------------------------------------------------*/
+BOOL Load_Work_Data() {
+	LVITEM LI;
+	int W_No;
+	SQLCHAR  E_ID[30];
+	TIMESTAMP_STRUCT W_SDate, W_EDate;
+	SQLLEN I_W_No, I_E_ID, I_W_SDate, I_W_EDate;
+	TCHAR No[100], Date[100];
+
+	SQLBindCol(hStmt, 1, SQL_C_ULONG, &W_No, 0, &I_W_No);
+	SQLBindCol(hStmt, 2, SQL_C_CHAR, E_ID, sizeof(E_ID), &I_E_ID);
+	SQLBindCol(hStmt, 3, SQL_C_TYPE_TIMESTAMP, &W_SDate, sizeof(W_SDate), &I_W_SDate);
+	SQLBindCol(hStmt, 4, SQL_C_TYPE_TIMESTAMP, &W_EDate, sizeof(W_EDate), &I_W_EDate);
+
+	if (SQLExecDirect(hStmt, (SQLCHAR*)"select W_No, E_ID, W_Start, W_End from dbo.Work_Info", SQL_NTS) != SQL_SUCCESS) return FALSE;
+
+	LI.mask = LVIF_TEXT;
+
+	while (SQLFetch(hStmt) != SQL_NO_DATA) {
+
+		// 아이템
+		LI.iItem = 0;
+		LI.iSubItem = 0;
+		wsprintf(No, "%d", W_No);
+		LI.pszText = No;
+		SendMessage(Work_I_List, LVM_INSERTITEM, 0, (LPARAM)&LI);
+
+		LI.iSubItem = 1;
+		LI.pszText = (LPSTR)E_ID;
+		SendMessage(Work_I_List, LVM_SETITEM, 0, (LPARAM)&LI);
+
+		LI.iSubItem = 2;
+		wsprintf(Date, "%d-%d-%d %d:%d:%d", W_SDate.year, W_SDate.month, W_SDate.day, W_SDate.hour, W_SDate.minute, W_SDate.second);
+		LI.pszText = (LPSTR)Date;
+		SendMessage(Work_I_List, LVM_SETITEM, 0, (LPARAM)&LI);
+		
+		LI.iSubItem = 3;
+		wsprintf(Date, "%d-%d-%d %d:%d:%d", W_EDate.year, W_EDate.month, W_EDate.day, W_EDate.hour, W_EDate.minute, W_EDate.second);
+		LI.pszText = (LPSTR)Date;
+		SendMessage(Work_I_List, LVM_SETITEM, 0, (LPARAM)&LI);
+
 	}
 
 	if (hStmt) SQLCloseCursor(hStmt);
