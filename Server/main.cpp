@@ -15,10 +15,11 @@ typedef struct Client_Information {
 	TCHAR ID[21];			//ID
 	TCHAR RemainTime[8];	//남은시간(최대 999:59:59)
 }CI;
+
 // 좌석 정보 구조체
 typedef struct Client_Seat {
 	int state;		//좌석 상태
-	CI client;		//비트맵에 띄워질 고객 정보
+	CI* client;		//비트맵에 띄워질 고객 정보
 }SEAT;
 
 // 소켓 정보 구조체
@@ -27,6 +28,8 @@ typedef struct Client_Socket {
 	SOCKET Client_Sock;
 	struct Client_Socket* link;
 }CS;
+
+
 
 void Init_Wnd(WNDCLASS*, int);
 
@@ -91,6 +94,7 @@ SQLHSTMT hStmt;
 
 SOCKET listensock;
 SOCKET clientsock = 0;
+SOCKET hSocket = 0;
 CS* C_S;									// 소켓 Linked		
 sockaddr_in addr_server;
 sockaddr_in addr_client;
@@ -134,6 +138,18 @@ HWND Revenue_I_List;	// 매출 리스트뷰
 HWND Employee_I_List;	// 직원 리스트뷰
 HWND Customer_I_List;	// 회원 리스트뷰
 HWND Work_I_List;		// 근무 리스트뷰
+
+/////////////////////////////////////////////////////////////
+
+// 운영 관련 변수////////////////////////////////////////////
+
+SEAT* create_S();		// 좌석 초기화
+
+/////////////////////////////////////////////////////////////
+
+// 운영 관련 변수////////////////////////////////////////////
+
+SEAT* hSeat[30];
 
 /////////////////////////////////////////////////////////////
 
@@ -233,13 +249,14 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT iMessage, WPARAM wParam, LPARAM lParam)
 		InitCommonControls();
 
 		Image = ImageList_LoadBitmap(g_hInst, MAKEINTRESOURCE(IDB_BITMAP1), 45, 1, RGB(255, 255, 255));		//좌석 이미지리스트 설정 
-		SetTimer(hWnd, BuffT, 50, NULL);	//버퍼링 타이머 생성
+		SetTimer(hWnd, BuffT, 1, NULL);	//버퍼링 타이머 생성
 		C_S = create();		// 소켓 구조체 생성
 
 		WNDCLASS Wnd_S;
 		WNDCLASS Wnd_R;
 		WNDCLASS Wnd_E;
 		WNDCLASS Wnd_C;
+		WNDCLASS Wnd_W;
 
 		// 제품 윈도우 설정
 		Init_Wnd(&Wnd_S, 0);
@@ -250,9 +267,17 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT iMessage, WPARAM wParam, LPARAM lParam)
 		// 회원 윈도우 설정
 		Init_Wnd(&Wnd_C, 3);
 		// 근무기록 윈도우 설정
-		Init_Wnd(&Wnd_C, 4);
+		Init_Wnd(&Wnd_W, 4);
 
-		DBExcuteSQL();		// 나중에 수정 개선할 함수입니다.
+
+		
+		for (int i = 0; i < 30; i ++) {
+			hSeat[i] = create_S();				// 좌석 초기화 30좌석
+		}
+		for (int i = 0; i < 30; i += 2) {
+			hSeat[i]->state = true;
+		}
+		//DBExcuteSQL();		나중에 수정 개선할 함수입니다.
 
 		return 0;
 
@@ -299,6 +324,8 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT iMessage, WPARAM wParam, LPARAM lParam)
 		EndPaint(hWnd, &ps);
 		return 0;
 	case WM_DESTROY:
+		closesocket(clientsock);
+		WSACleanup();
 		if (hBit) {
 			DeleteObject(hBit);
 		}
@@ -949,8 +976,8 @@ DWORD WINAPI Connect_Thread(LPVOID Param) {
 --------------------------------------------------------*/
 DWORD WINAPI Recv_Thread(LPVOID Param) {
 	SOCKET* P = (SOCKET*)Param;
-
-
+	TCHAR strText[128];
+	TCHAR STR[256],text[10];
 	static int i;
 
 	while (1) {
@@ -962,6 +989,24 @@ DWORD WINAPI Recv_Thread(LPVOID Param) {
 			return 0;
 		}
 		else {
+			lstrcpy(strText, buf);
+			strText[2] = '\0';
+
+			if (lstrcmp(strText, "S-") == 0) {
+				hSocket = (SOCKET)(*P);
+				lstrcpy(STR, "");
+				if (hSeat[0]->state == false) {
+					wsprintf(text, "%d", 0);
+					lstrcat(STR, text);
+				}
+				for (int i = 1; i < 30; i ++) {
+					if (hSeat[i]->state == false) {
+						wsprintf(text, ",%d", i);
+						lstrcat(STR, text);
+					}
+				}
+				nReturn = send(hSocket, STR, sizeof(STR), 0);
+			}
 		}
 	}
 	return 0;
@@ -1007,7 +1052,7 @@ void delsock(SOCKET S) {
 }
 
 /*--------------------------------------------------------
- DrawBitmap(HDC, int , int , HBITMAP ): 지정좌표에 비트맵 출력
+ DrawBitmap(HDC,int,int,HBITMAP): 지정좌표에 비트맵 출력
 --------------------------------------------------------*/
 void DrawBitmap(HDC hdc, int x, int y, HBITMAP hBit) {
 	HDC MemDC;
@@ -1050,8 +1095,8 @@ void OnTimer() {
 	/*
 		좌석 비트맵 출력할 코드
 	*/
-	Ellipse(hMemDC, 100, 100, 200, 200);
-
+	Ellipse(hMemDC, 100 + i, 100, 200 + i, 200);
+	i++;
 
 
 	SelectObject(hMemDC, OldBit);
@@ -1059,4 +1104,17 @@ void OnTimer() {
 	ReleaseDC(hWndMain, hdc);
 
 	InvalidateRect(hWndMain, NULL, FALSE);
+}
+
+/*--------------------------------------------------------
+ * create_S(): 좌석 초기화 함수
+--------------------------------------------------------*/
+SEAT* create_S() {
+	SEAT* N;
+
+	N = (SEAT*)malloc(sizeof(SEAT));
+	N->state = false;
+	N->client = NULL;
+
+	return N;
 }

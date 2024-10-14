@@ -336,6 +336,10 @@ DWORD WINAPI ThreadFunc(LPVOID Param) {//팀플//리시브스레드로써 요청의 결과를 다
 				}
 				else wsprintf(buf, "%s", "탈퇴실패");						//서버로부터  "70" 받았을 때
 			}
+			else {
+				MessageBox(hWndMain, buf,"server수신", MB_OK);					/////////////////////////////////////////////////////////////////// 박정현 테스트 문단////////////////////////
+				// 이쪽에 서버에서 보내준 데이터를 기반으로 앉을수 있는 좌석을 선별하고 선택할수있게 요청		
+}
 			if (lstrlen(buf) != 0) {//팀플//모든 메세지 나타내기
 				sprintf_s(strTemp, "수신한 메시지:%s", buf);								//팀플//위에서 cmd를 변환한 메세지를 프로시저의 채팅 에디트에 띄우기
 				int len = GetWindowTextLength(hEdit_Chat);
@@ -1123,6 +1127,7 @@ LRESULT CALLBACK LoginProc(HWND hWnd, UINT iMessage, WPARAM wParam, LPARAM lPara
 LRESULT CALLBACK SelSeatProc(HWND hWnd, UINT iMessage, WPARAM wParam, LPARAM lParam) {						//자리선택
 	switch (iMessage) {
 	case WM_CREATE:
+		nReturn = send(clientsock, "S-", sizeof("S-"), 0);			///////////////////////////////////// 박정현 테스트//////////////////////////////////////
 		//자리번호 스태틱
 		hStatic_Sn = CreateWindow(TEXT("static"), TEXT("SN(2자리)"), WS_CHILD | WS_VISIBLE | WS_BORDER | ES_AUTOHSCROLL,
 			10, 0, 80, 20, hWnd, (HMENU)ID_S_SN, g_hInst, NULL);
