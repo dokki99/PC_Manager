@@ -5,59 +5,74 @@
 #include <sql.h>
 #include <sqlext.h>
 #include "resource.h"
-HWND hWndMain;		// ¸ÞÀÎ È­¸é ÇÚµé
-HWND hWnd_C;		// ¿¬°á È­¸é ÇÚµé
-HWND hWnd_JU;		// °¡ÀÔ/¼öÁ¤ È­¸é ÇÚµé
-HWND hWnd_L;		// ·Î±×ÀÎ È­¸é ÇÚµé
-HWND hWnd_S;		// ÀÚ¸®¼±ÅÃ È­¸é ÇÚµé
-HWND hWnd_O;		// ÁÖ¹® È­¸é ÇÚµé
-LPCTSTR C_Class = TEXT("¿¬°á");					//¿¬°á Á¦¸ñ
-LPCTSTR JU_Class = TEXT("È¸¿ø°¡ÀÔ/¼öÁ¤");//°¡ÀÔ/¼öÁ¤ Á¦¸ñ
-LPCTSTR L_Class = TEXT("·Î±×ÀÎ");				//·Î±×ÀÎ Á¦¸ñ
-LPCTSTR S_Class = TEXT("ÀÚ¸®¼±ÅÃ");			//ÀÚ¸®¼±ÅÃ Á¦¸ñ
-LPCTSTR O_Class = TEXT("ÁÖ¹®");					//ÁÖ¹® Á¦¸ñ
-//ÇÚµé
-HWND hEdit_Chat;									//ÇÁ·Î½ÃÀúÀÇ Ã¤ÆÃ ¿¡µðÆ®
-HWND hButton_Logout;							//ÇÁ·Î½ÃÀúÀÇ ·Î±×¾Æ¿ô ¹öÆ°
-HWND hButton_Delete;							//ÇÁ·Î½ÃÀúÀÇ Å»Åð ¹öÆ°
-HWND hEdit_Timer;								//ÇÁ·Î½ÃÀúÀÇ Å»Åð ¿¡µðÆ®
-HWND hEdit_Ip;										//¿¬°áÀÇ IP ¿¡µðÆ®
-HWND hEdit_Port;									//¿¬°áÀÇ PORT ¿¡µðÆ®
-HWND hButton_Connect;						//¿¬°áÀÇ ¿¬°á ¹öÆ°
-HWND hEdit_Id;										//°¡ÀÔ/¼öÁ¤ÀÇ ¾ÆÀÌµð ¿¡µðÆ®
-HWND hEdit_Pw;										//°¡ÀÔ/¼öÁ¤ÀÇ ºñ¹ø ¿¡µðÆ®
-HWND hEdit_Name;								//°¡ÀÔ/¼öÁ¤ÀÇ ÀÌ¸§ ¿¡µðÆ®
-HWND hEdit_Pn;										//°¡ÀÔ/¼öÁ¤ÀÇ ÀüÈ­¹øÈ£ ¿¡µðÆ®
-HWND hEdit_Addr;									//°¡ÀÔ/¼öÁ¤ÀÇ ÁÖ¼Ò ¿¡µðÆ®
-HWND hEdit_Birth;									//°¡ÀÔ/¼öÁ¤ÀÇ »ýÀÏ ¿¡µðÆ®
-HWND hButton_Join;								//°¡ÀÔ/¼öÁ¤ÀÇ °¡ÀÔ ¹öÆ°
-HWND hButton_Update;							//°¡ÀÔ/¼öÁ¤ÀÇ ¼öÁ¤ ¹öÆ°
-HWND hEdit_Login_Id;							//·Î±×ÀÎÀÇ ¾ÆÀÌµð ¿¡µðÆ®
-HWND hEdit_Login_Pw;							//·Î±×ÀÎÀÇ ºñ¹ø ¿¡µðÆ®
-HWND hButton_Login;								//·Î±×ÀÎÀÇ ·Î±×ÀÎ ¹öÆ°
-HWND hEdit_Sn;										//ÀÚ¸®ÀÇ ÀÚ¸®¹øÈ£ ¿¡µðÆ®
-HWND hButton_SelSeat;						//ÀÚ¸®ÀÇ ÀÚ¸®¹øÈ£¼±ÅÃ ¹öÆ°
-HWND hListBox_ItemList;						//ÁÖ¹®ÀÇ ¾ÆÀÌÅÛ¸®½ºÆ® ¸®½ºÆ®¹Ú½º
-HWND hEdit_OrderCount;						//ÁÖ¹®ÀÇ ¾ÆÀÌÅÛÁÖ¹®°¹¼ö ¿¡µðÆ®
-HWND hButton_Order;							//ÁÖ¹®ÀÇ ÁÖ¹® ¹öÆ°
-HWND hStatic_Ip;									//¿¬°áÀÇ IP ½ºÅÂÆ½
-HWND hStatic_Port;								//¿¬°áÀÇ PORT ½ºÅÂÆ½
-HWND hStatic_Id;									//°¡ÀÔ/¼öÁ¤ÀÇ ¾ÆÀÌµð ½ºÅÂÆ½
-HWND hStatic_Pw;									//°¡ÀÔ/¼öÁ¤ÀÇ ºñ¹ø ½ºÅÂÆ½
-HWND hStatic_Name;								//°¡ÀÔ/¼öÁ¤ÀÇ ÀÌ¸§ ½ºÅÂÆ½
-HWND hStatic_Addr;								//°¡ÀÔ/¼öÁ¤ÀÇ ÁÖ¼Ò ½ºÅÂÆ½
-HWND hStatic_Birth;								//°¡ÀÔ/¼öÁ¤ÀÇ »ýÀÏ ½ºÅÂÆ½
-HWND hStatic_Pn;									//°¡ÀÔ/¼öÁ¤ÀÇ ÀüÈ­¹øÈ£ ½ºÅÂÆ½
-HWND hStatic_Login_Id;						//·Î±×ÀÎÀÇ ¾ÆÀÌµð ½ºÅÂÆ½
-HWND hStatic_Login_Pw;						//·Î±×ÀÎÀÇ ºñ¹ø ½ºÅÂÆ½
-HWND hStatic_Sn;									//ÀÚ¸®ÀÇ ÀÚ¸®¹øÈ£ ½ºÅÂÆ½
-HWND hStatic_Item;								//ÁÖ¹®ÀÇ ¾ÆÀÌÅÛ ½ºÅÂÆ½
-HWND hStatic_OrderCount;					//ÁÖ¹®ÀÇ ¾ÆÀÌÅÛÁÖ¹®°¹¼ö ½ºÅÂÆ½
-HWND hStatic_Chat;								//ÇÁ·Î½ÃÀúÀÇ Ã¤ÆÃ ½ºÅÂÆ½
-HWND hStatic_Timer;							//ÇÁ·Î½ÃÀúÀÇ Å¸ÀÌ¸Ó ½ºÅÂÆ½
+//È­¸é ÇÚµé
+HWND hWndMain;		// ¸ÞÀÎ
+HWND hWnd_C;			// ¿¬°á
+HWND hWnd_JU;		// °¡ÀÔ/¼öÁ¤
+HWND hWnd_L;			// ·Î±×ÀÎ
+HWND hWnd_S;			// ÀÚ¸®¼±ÅÃ
+HWND hWnd_O;			// ÁÖ¹® 
+//È­¸é Á¦¸ñ
+LPCTSTR C_Class = TEXT("¿¬°á");					//¿¬°á
+LPCTSTR JU_Class = TEXT("È¸¿ø°¡ÀÔ/¼öÁ¤");//°¡ÀÔ/¼öÁ¤
+LPCTSTR L_Class = TEXT("·Î±×ÀÎ");				//·Î±×ÀÎ
+LPCTSTR S_Class = TEXT("ÀÚ¸®¼±ÅÃ");			//ÀÚ¸®¼±ÅÃ
+LPCTSTR O_Class = TEXT("ÁÖ¹®");					//ÁÖ¹®
+////ÄÁÆ®·Ñ ÇÚµé
+//ÇÁ·Î½ÃÀú
+HWND hEdit_Chat;									//Ã¤ÆÃ ¿¡µðÆ®
+HWND hButton_Logout;							//·Î±×¾Æ¿ô ¹öÆ°
+HWND hButton_Delete;							//Å»Åð ¹öÆ°
+HWND hEdit_Timer;								//Å»Åð ¿¡µðÆ®
+//¿¬°á
+HWND hEdit_Ip;										//IP ¿¡µðÆ®
+HWND hEdit_Port;									//PORT ¿¡µðÆ®
+HWND hButton_Connect;						//¿¬°á ¹öÆ°
+//°¡ÀÔ/¼öÁ¤
+HWND hEdit_Id;										//¾ÆÀÌµð ¿¡µðÆ®
+HWND hEdit_Pw;										//ºñ¹ø ¿¡µðÆ®
+HWND hEdit_Name;								//ÀÌ¸§ ¿¡µðÆ®
+HWND hEdit_Pn;										//ÀüÈ­¹øÈ£ ¿¡µðÆ®
+HWND hEdit_Addr;									//ÁÖ¼Ò ¿¡µðÆ®
+HWND hEdit_Birth;									//»ýÀÏ ¿¡µðÆ®
+HWND hButton_Join;								//°¡ÀÔ ¹öÆ°
+HWND hButton_Update;							//¼öÁ¤ ¹öÆ°
+//·Î±×ÀÎ
+HWND hEdit_Login_Id;							//¾ÆÀÌµð ¿¡µðÆ®
+HWND hEdit_Login_Pw;							//ºñ¹ø ¿¡µðÆ®
+HWND hButton_Login;								//·Î±×ÀÎ ¹öÆ°
+//ÀÚ¸®¼±ÅÃ
+HWND hEdit_Sn;										//ÀÚ¸®¹øÈ£ ¿¡µðÆ®
+HWND hButton_SelSeat;						//ÀÚ¸®¹øÈ£¼±ÅÃ ¹öÆ°
+//ÁÖ¹®
+HWND hListBox_ItemList;						//¾ÆÀÌÅÛ¸®½ºÆ® ¸®½ºÆ®¹Ú½º
+HWND hEdit_OrderCount;						//¾ÆÀÌÅÛÁÖ¹®°¹¼ö ¿¡µðÆ®
+HWND hButton_Order;							//ÁÖ¹® ¹öÆ°
+///½ºÅÂÆ½
+//¿¬°á
+HWND hStatic_Ip;									//IP
+HWND hStatic_Port;								//PORT
+//°¡ÀÔ/¼öÁ¤
+HWND hStatic_Id;									//¾ÆÀÌµð
+HWND hStatic_Pw;									//ºñ¹ø
+HWND hStatic_Name;								//ÀÌ¸§
+HWND hStatic_Addr;								//ÁÖ¼Ò
+HWND hStatic_Birth;								//»ýÀÏ
+HWND hStatic_Pn;									//ÀüÈ­¹øÈ£
+//·Î±×ÀÎ
+HWND hStatic_Login_Id;						//¾ÆÀÌµð
+HWND hStatic_Login_Pw;						//ºñ¹ø
+//ÀÚ¸®¼±ÅÃ
+HWND hStatic_Sn;									//ÀÚ¸®¹øÈ£
+//ÁÖ¹®
+HWND hStatic_Item;								//¾ÆÀÌÅÛ
+HWND hStatic_OrderCount;					//¾ÆÀÌÅÛÁÖ¹®°¹¼ö
+//ÇÁ·Î½ÃÀú
+HWND hStatic_Chat;								//Ã¤ÆÃ
+HWND hStatic_Timer;							//Å¸ÀÌ¸Ó
 //ÇÁ·Î½ÃÀúÇÔ¼öµé
-LRESULT CALLBACK WndProc(HWND, UINT, WPARAM, LPARAM);															//±âº»È­¸é
-LRESULT CALLBACK ConnectProc(HWND, UINT, WPARAM, LPARAM);														//¿¬°áÈ­¸é
+LRESULT CALLBACK WndProc(HWND, UINT, WPARAM, LPARAM);															//±âº»
+LRESULT CALLBACK ConnectProc(HWND, UINT, WPARAM, LPARAM);														//¿¬°á
 LRESULT CALLBACK Join_Or_UpdateProc(HWND, UINT, WPARAM, LPARAM);										//°¡ÀÔ/¼öÁ¤
 LRESULT CALLBACK LoginProc(HWND, UINT, WPARAM, LPARAM);															//·Î±×ÀÎ
 LRESULT CALLBACK SelSeatProc(HWND, UINT, WPARAM, LPARAM);														//ÀÚ¸®¼±ÅÃ
@@ -69,49 +84,69 @@ LPCTSTR lpszClass = TEXT("PC¹æ Å¬¶óÀÌ¾ðÆ®");																										//À©µµ¿ì Ç
 const char g_szlpAddress[17] = "127.0.0.1";
 const unsigned short g_uPort = 7878;
 TCHAR tgIp[17] = "127.0.0.1", tgPort[10] = "7878";																									//IP¿Í PORT¹øÈ£
-TCHAR tgId[10], tgName[10], tgPw[10],tgPn[10], tgAddr[10], tgBirth[10];										//¾ÆÀÌµð,ÀÌ¸§,ºñ¹ø,ÀüÈ­¹øÈ£,ÁÖ¼Ò,»ýÀÏ ¹®ÀÚ¿­ º¯¼öµé
-int nip, nport;																																	//IP¿Í PORT ¿¬°á ¼³Á¤
+TCHAR tgId[10], tgName[10], tgPw[10],tgPn[10], tgAddr[10], tgBirth[10];																//¾ÆÀÌµð,ÀÌ¸§,ºñ¹ø,ÀüÈ­¹øÈ£,ÁÖ¼Ò,»ýÀÏ ¹®ÀÚ¿­ º¯¼öµé
+int nip, nport;																																							//IP¿Í PORT¹øÈ£ ¼ýÀÚ·Î º¯È¯
 																
 DWORD ThreadID;																																					//½º·¹µå¾ÆÀÌµð
 HANDLE hThread;																																					//½º·¹µå ÇÚµé
 
 TCHAR tgcmdserver[200];																																		//¼­¹ö¿Í Åë½ÅÇÏ´Â Ä¿¸àµå ¹®ÀÚ¿­
+///¼ÒÄÏ °ü·Ã º¯¼ö
 int nReturn;																																								//Åë½Å °á°ú 
 WSADATA wsadata;																																				//¼ÒÄÏ ¿¬°á
 SOCKET clientsock;																																					//¼ÒÄÏ¹øÈ£ ´ã±â
-sockaddr_in addr_client;																																			//¼ÒÄÏ¹øÈ£ ´ã±â
-int addrlen_clt = sizeof(sockaddr);																															//¼ÒÄÏ¹øÈ£ ´ã±â
-char buf[1024];																																						////¸Þ½ÃÁö																						
+sockaddr_in addr_client;																																			
+int addrlen_clt = sizeof(sockaddr);																															
+///¼­¹ö·ÎºÎÅÍ ¹Þ´Â ¸Þ¼¼Áö
+char buf[1024];																																						//¸Þ½ÃÁö ¹®ÀÚ¿­																						
 char strTemp[1024];																																				//¸Þ¼¼Áö¸¦ Ã¤ÆÃÃ¢¿¡ ¼ö½ÅÇÑ ¸Þ¼¼Áö·Î º¯È¯
+///
 
-//ÆÀÇÃ //ÁÖ¿äº¯¼ö
+////ÁÖ¿äº¯¼ö
+//Ä¿¸àµå¿¡ ¿©·¯ Á¤º¸°¡ ÀÖÀ»¶§
 int turn = 0;																																								//À¯ÀúÀÇ Á¤º¸¸¦ ¼ø¼­´ë·Î °¡Á®¿À°Ô ÇÏ´Â ¼ø¼­ Á¦¾î
-int ini;																																										//Ä¿¸àµå¿¡¼­ °¢ Á¤º¸¸¶´Ù ¹öÆÛ(¸Þ¼¼Áö)ÀÇ ÀÎµ¦½º
-TCHAR info[200];																																					//Ä¿¸àµå¿¡¼­ ¿ä¼Ò¸¦ »Ì´Â ¹®ÀÚ¿­
-int infoi = 0;																																								//Ä¿¸àµå¿¡¼­ ¿ä¼Ò¸¦ »Ì´Â ¹®ÀÚ¿­ÀÇ ÀÎµ¦½º
-TCHAR usersn[10];																																					//·Î±×ÀÎµÈ À¯ÀúÀÇ ÀÚ¸®¹øÈ£
-TCHAR userpw[10];																																					//·Î±×ÀÎµÈ À¯ÀúÀÇ ºñ¹ø
-int pctimei;																																								//·Î±×ÀÎµÈ À¯ÀúÀÇ ½Ã°£ ÀÎµ¦½º
-int ngitemcount;																																						//¾ÆÀÌÅÛÁÖ¹®°¹¼ö 
-TCHAR tgselitemi[10];																																				//¾ÆÀÌÅÛÁÖ¹®°¹¼ö ¹®ÀÚ¿­
-int selitemi;																																								//¾ÆÀÌÅÛÁÖ¹®°¹¼ö(¼ýÀÚ)
-int chkseat=0;																																							//ÀÚ¸®¼±ÅÃ Ã¼Å©
-int chkjoin = 0;																																							//°¡ÀÔ Ã¼Å©
-int chklogin = 0;																																						//·Î±×ÀÎ Ã¼Å©
-int i;	
+int ini;																																										//°¢ Á¤º¸¸¶´Ù ¹öÆÛ(¸Þ¼¼Áö)ÀÇ ÀÎµ¦½º
+TCHAR info[200];																																					//¿ä¼Ò¸¦ »Ì´Â ¹®ÀÚ¿­
+int infoi = 0;																																								//¿ä¼Ò¸¦ »Ì´Â ¹®ÀÚ¿­ÀÇ ÀÎµ¦½º
+//
+//·Î±×ÀÎ»óÈ²ÀÇ  À¯ÀúÀÇ º¯¼öµé
+TCHAR userid[10];																																					//¾ÆÀÌµð
+TCHAR usersn[10];																																					//ÀÚ¸®¹øÈ£
+TCHAR userpw[10];																																					//ºñ¹ø
+int pctimei;																																								//½Ã°£ ÀÎµ¦½º
 int pctime;																																								//·Î±×ÀÎµÈ À¯ÀúÀÇ ½Ã°£
-int chktimer;																																							//Å¸ÀÌ¸Ó Á¦¾î(1ÀÌ¸é ½ÇÇà/0ÀÌ¸é Á¾·á)																																																																								
-TCHAR tgitemcount[10] = "";																																	//¾ÆÀÌÅÛ ¹®ÀÚ¿­ °¹¼ö ¹®ÀÚ¿­
-TCHAR tgSeatnum[10];																																			//ÀÚ¸®¹øÈ£ ¹®ÀÚ¿­
+//
+///ÁÖ¹®»óÈ²ÀÇ º¯¼öµé
+//¾ÆÀÌÅÛÁÖ¹®°¹¼ö
+TCHAR tgselitemi[10];																																				//ÀÎµ¦½º¸¦ ¹®ÀÚ¿­·Î º¯È¯
+int selitemi;																																								//¸®½ºÆ® ¹Ú½ºÀÇ ÀÎµ¦½º
+TCHAR tgitemcount[10] = "";																																	//°³¼ö ¹®ÀÚ¿­
+//
+///
+//»óÅÂ Ã¼Å© º¯¼ö
+int chkseat=0;																																							//ÀÚ¸®¼±ÅÃ
+int chkjoin = 0;																																							//°¡ÀÔ
+int chklogin = 0;																																						//·Î±×ÀÎ
+int chktimer;																																							//Å¸ÀÌ¸Ó Á¦¾î(1ÀÌ¸é ½ÇÇà/0ÀÌ¸é Á¾·á)	
+int chkendbtn = 0;																																					//·Î±×¾Æ¿ô/Å»Åð 
+//
+int i;		
+//ÀÚ¸®¹øÈ£ ¼±ÅÃ º¯¼öµé
 TCHAR tgnum[10];																																					//½ÅÃ»ÇÏ´Â ÀÚ¸®¹øÈ£ ¹®ÀÚ¿­
-TCHAR userid[10];																																					//·Î±×ÀÎ µÈ À¯Àú ¾ÆÀÌµð ¹®ÀÚ¿­
-TCHAR orderbuf[10];																																				//ÁÖ¹®¿ä¼ÒÁ¤º¸(¹Ì¸® ¸Þ¼¼Áö°¡ ÁÖ¹®ÀÎÁö ÆÇº°)
-TCHAR pctimebuf[10];																																				//À¯Àú ½Ã°£ ´ã¾Æ¿À±â
-TCHAR tpctime[10];																																					//À¯Àú½Ã°£ ¹®ÀÚ¿­
-int orderi = 0;																																							//ÁÖ¹®¿ä¼ÒÁ¤º¸ ÀÎµ¦½º
-int chkendbtn = 0;																																					//·Î±×¾Æ¿ô/Å»Åð Ã¼Å©
 
-DWORD WINAPI ThreadFunc(LPVOID Param) {//ÆÀÇÃ//¸®½Ãºê½º·¹µå·Î½á ¿äÃ»ÀÇ °á°ú¸¦ ´Ù·ë
+//Ä¿¸Çµå°¡ ÁÖ¹®ÀÎÁö ÆÇº°
+TCHAR orderbuf[10];																																				//ÁÖ¹®¿ä¼ÒÁ¤º¸(¹Ì¸® ¸Þ¼¼Áö°¡ ÁÖ¹®ÀÎÁö ÆÇº°)
+int orderi = 0;																																							//ÁÖ¹®¿ä¼ÒÁ¤º¸ ÀÎµ¦½º
+//
+
+//À¯Àú½Ã°£
+TCHAR pctimebuf[10];																																				//Ä¿¸Çµå¿¡¼­ ´ã¾Æ¿À±â
+TCHAR tpctime[10];																																					//Ãâ·ÂÇÏ±â À§ÇÑ ¹®ÀÚ¿­
+//
+
+//DWORD WINAPI ThreadFunc(LPVOID){}:¸®½Ãºê½º·¹µå·Î½á ¿äÃ»ÀÇ °á°ú¸¦ ´Ù·ë
+//¸Ó¸´¸»ÀÎ ¼ýÀÚ ´ÙÀ½ ¼ýÀÚ°¡  1ÀÌ ¿À¸é °¡´É/ 0ÀÌ ¿À¸é ºÒ°¡
+DWORD WINAPI ThreadFunc(LPVOID Param) {
 	HDC hdc;
 	SOCKET* P = (SOCKET*)Param;
 	for (;;) {
@@ -120,59 +155,63 @@ DWORD WINAPI ThreadFunc(LPVOID Param) {//ÆÀÇÃ//¸®½Ãºê½º·¹µå·Î½á ¿äÃ»ÀÇ °á°ú¸¦ ´Ù
 		if (nReturn == 0 || nReturn == SOCKET_ERROR) {
 			continue;
 		}
-		else {								
+		else {
+			//orderbuf¸¦ ÅëÇØ Ä¿¸Çµå°¡ ÁÖ¹®¿¡ °üÇÑ°ÍÀÎÁö ÆÇº°
 			orderi = 0;
 			lstrcpy(orderbuf, "");
 			for (int i = 0; i < 3; i++) {
 				orderbuf[orderi++] = buf[i];
 			}
-			orderbuf[orderi] = '\0';												//ÁÖ¹®À» ´ã±â
+			orderbuf[orderi] = '\0';
+			//
+			//ÀÚ¸®¼±ÅÃ °á°ú(°¡´É:11/ºÒ°¡:10)
 			if (buf[0] == '1') {
 				if (lstrcmp(buf, TEXT("11")) == 0) {
-					chkseat = 1;																	//ÀÚ¸®
-					lstrcpy(tgSeatnum, tgnum);										//ÀÚ¸®¹øÈ£ ´ã±â
-					lstrcpy(usersn, tgSeatnum);										//À¯ÀúÀÇ ÀÚ¸®¹øÈ£ ´ã±â
+					chkseat = 1;																																			//ÀÚ¸®¼±ÅÃ Ã¼Å©
+					lstrcpy(usersn, tgnum);																															//ÀÚ¸®¹øÈ£ ´ã±â									
 					wsprintf(buf, "%s", "ÀÚ¸®»ç¿ë°¡´É");
 				}
-				else {
-					wsprintf(buf, "%s", "ÀÚ¸®»ç¿ëºÒ°¡");						//¼­¹ö·ÎºÎÅÍ "10" ¹Þ¾ÒÀ»¶§
-				}
+				else wsprintf(buf, "%s", "ÀÚ¸®»ç¿ëºÒ°¡");						
 			}
+			//È¸¿ø°¡ÀÔ °á°ú(°¡´É:31/ºÒ°¡:30)
 			else if (buf[0] == '3') {
-				 if (lstrcmp(buf, TEXT("31")) == 0) {								//È¸¿ø°¡ÀÔ
-					chkjoin = 1;
+				 if (lstrcmp(buf, TEXT("31")) == 0) {								
+					chkjoin = 1;																										
 					wsprintf(buf, "%s", "È¸¿ø°¡ÀÔ¼º°ø");
-				 }
-				 else {
-					 wsprintf(buf, "%s", "È¸¿ø°¡ÀÔ½ÇÆÐ");						//¼­¹ö·ÎºÎÅÍ "30" ¹Þ¾ÒÀ»¶§
-				 }
+				}
+				 else wsprintf(buf, "%s", "È¸¿ø°¡ÀÔ½ÇÆÐ");						
 			}
+			//·Î±×ÀÎ °á°ú(°¡´É:41NAME,PN,ADDR,BIRTH/ºÒ°¡:4100 ¶Ç´Â 40)
 			else if (buf[0] == '4') {
-				if (buf[1]=='1') {					//·Î±×ÀÎµÇ¸é ³²Àº½Ã°£Ã³¸®µÇ°í ¾ÆÀÌµðÀúÀå			//·Î±×ÀÎ½ÇÆÐ ÀÌÀ¯: 1.¾ÆÀÌµð/ºñ¹ø¿À·ù,2.³²Àº ½Ã°£ 0ÀÌÇÏ
+				if (buf[1]=='1') {			
+					//³²Àº½Ã°£ ´ã±â
 					pctimei = 0;
 					for (int i = 2; i < 4; i++) {
-						pctimebuf[pctimei++] = buf[i];	//°¹¼ö³ª ¹øÈ£´Â 1ÀÌ¾Æ´Ñ 01Çü½Ä(2ÀÚ¸®)
+						pctimebuf[pctimei++] = buf[i];	
 					}
-					pctimebuf[pctimei] = '\0';								//³²Àº½Ã°£ ´ã±â
+					pctimebuf[pctimei] = '\0';								
 					pctime = atoi(pctimebuf);
+					//
+					//°¡´ÉÇÒ¶§ ÀÔ·ÂÇÑ ¾ÆÀÌµð ºñ¹øÀ» ÀúÀåÇÏ°í ÀÌ¸§,ÀüÈ­¹øÈ£,ÁÖ¼Ò,»ýÀÏµéÀ» ´ã±â
 					if (pctime >= 0) {
-						lstrcpy(userid, tgId);									//°èÁ¤ ¾ÆÀÌµð,ºñ¹ø ´ã±â
+						lstrcpy(userid, tgId);																											//°èÁ¤ ¾ÆÀÌµð,ºñ¹ø ´ã±â
 						lstrcpy(userpw, tgPw);
-						i = 4;																//·Î±×ÀÎ Ä¿¸ÇµåÀÇ °¡Á®¿Ã Á¤º¸ÀÇ  ½ÃÀÛÁ¡
-						turn = -1;														//°¡Á®¿Ã Á¤º¸¸¦ ¼ø¼­´ë·Î °¡Á®¿À°Ô Á¦¾î
-						while (buf[i] != '\0') { //ÀüÃ¼ CMD						
+						i = 4;																																		//·Î±×ÀÎ Ä¿¸ÇµåÀÇ °¡Á®¿Ã Á¤º¸ÀÇ  ½ÃÀÛÁ¡
+						turn = -1;																																//°¡Á®¿Ã Á¤º¸¸¦ ¼ø¼­´ë·Î °¡Á®¿À°Ô Á¦¾î
+						///·Î±×ÀÎ Ä¿¸àµå¿¡¼­ ³ª¸ÓÁö Á¤º¸¸¦ ´ã´Â ÇÁ·Î¼¼½º(NAME-PN-ADDR-BIRTH¼ø)
+						while (buf[i] != '\0') { 						
 							infoi = 0;
-							if (buf[i] == ':') {										//°¢ Á¤º¸ÀÇ ½ÃÀÛÁ¡À¸·Î ÀÌµ¿
+							if (buf[i] == ':') {																												///°¢ Á¤º¸ÀÇ ½ÃÀÛÁ¡À¸·Î ÀÌµ¿
 								ini = i + 1;
 								turn++;
 							}
 							if (turn == 0) {			
-								while (buf[ini] != ':' && buf[ini] != '\0') {			//":"Àü±îÁö ´ã±â
+								while (buf[ini] != ':' && buf[ini] != '\0') {																		///":"Àü±îÁö ´ã±â
 									info[infoi++] = buf[ini++];
 								}
-								if (infoi >= 2) infoi -= 2;								//´ÙÀ½ Á¤º¸ Ä¿¸Çµå(PW,NAME..) ±æÀÌ ¸¸Å­ »©±â
+								if (infoi >= 2) infoi -= 2;																								///´ÙÀ½ Á¤º¸ Ä¿¸Çµå(PW,NAME..) ±æÀÌ ¸¸Å­ »©±â
 								info[infoi] = '\0';
-								lstrcpy(tgName, info); //NAME²¨³»±â
+								lstrcpy(tgName, info);					
 							}
 							else if (turn == 1) {
 								while (buf[ini] != ':' && buf[ini] != '\0') {
@@ -180,7 +219,7 @@ DWORD WINAPI ThreadFunc(LPVOID Param) {//ÆÀÇÃ//¸®½Ãºê½º·¹µå·Î½á ¿äÃ»ÀÇ °á°ú¸¦ ´Ù
 								}
 								if (infoi >= 4) infoi -= 4;
 								info[infoi] = '\0';
-								lstrcpy(tgPn, info); //PN²¨³»±â
+								lstrcpy(tgPn, info); 
 							}
 							else if (turn == 2) {
 								while (buf[ini] != ':' && buf[ini] != '\0') {
@@ -188,14 +227,14 @@ DWORD WINAPI ThreadFunc(LPVOID Param) {//ÆÀÇÃ//¸®½Ãºê½º·¹µå·Î½á ¿äÃ»ÀÇ °á°ú¸¦ ´Ù
 								}
 								if (infoi >= 5) infoi -= 5;
 								info[infoi] = '\0';
-								lstrcpy(tgAddr, info); //ADDR²¨³»±â
+								lstrcpy(tgAddr, info); 
 							}
 							else if (turn == 3) {
-								while (buf[ini] != '\0') {										//¸¶Áö¸·±îÁö ´ã±â
+								while (buf[ini] != '\0') {																									///¸¶Áö¸·±îÁö ´ã±â
 									info[infoi++] = buf[ini++];
 								}
 								info[infoi] = '\0';
-								lstrcpy(tgBirth, info); //BIRTH²¨³»±â
+								lstrcpy(tgBirth, info); 
 								turn = 0;
 								break;
 							}
@@ -203,82 +242,78 @@ DWORD WINAPI ThreadFunc(LPVOID Param) {//ÆÀÇÃ//¸®½Ãºê½º·¹µå·Î½á ¿äÃ»ÀÇ °á°ú¸¦ ´Ù
 						}
 
 						i = 0;
-						//°¡ÀÔ/¼öÁ¤¿¡ °èÁ¤ÀÇ Á¤º¸µé ¶ç¿ì±â
-						wsprintf(tpctime, "%d", pctime);
-						SetWindowText(hEdit_Timer, tpctime);				//ÇÁ·Î½ÃÀúÀÇ Å¸ÀÌ¸Ó ¿¡µðÆ®¿¡ À¯Àú ½Ã°£ ¶ç¿ì±â
-						SetWindowText(hEdit_Id, userid);						//°¡ÀÔ/¼öÁ¤ÀÇ ¾ÆÀÌµð¿¡ ¶ç¿ì±â
-						SetWindowText(hEdit_Pw, userpw);					//..ºñ¹ø
-						SetWindowText(hEdit_Name, tgName);				//..ÀÌ¸§
-						SetWindowText(hEdit_Pn, tgPn);							//..ÀüÈ­¹øÈ£
-						SetWindowText(hEdit_Addr, tgAddr);				//..ÁÖ¼Ò
-						SetWindowText(hEdit_Birth, tgBirth);				//..»ýÀÏ
-						if (pctime > 0) {												//À¯ÀúÀÇ ½Ã°£ÀÌ 0 ÃÊ°ú¿©¾ß ·Î±×ÀÎ °¡´É
+						wsprintf(tpctime, "%d", pctime);																								//³²Àº½Ã°£À» Ãâ·ÂÇÏ±âÀ§ÇØ ¹®ÀÚ¿­·Î
+						
+						if (pctime > 0) {																						
 							chklogin = 1;
-							chktimer = 1;
-							wsprintf(buf, "%s", "·Î±×ÀÎ¼º°ø");	//·Î±×ÀÎ°ú Å¸ÀÌ¸Ó µ¿ÀÛ ½ÃÀÛ
+							chktimer = 1;																														//·Î±×ÀÎµÇ¸é Å¸ÀÌ¸Ó µ¿ÀÛ
+							wsprintf(buf, "%s", "·Î±×ÀÎ¼º°ø");	
 						}
-						else wsprintf(buf, "%s", "·Î±×ÀÎ½ÇÆÐ(ÀÜ¿©½Ã°£¾øÀ½)");	//À¯ÀúÀÇ ½Ã°£ÀÌ 0ÀÌÇÏÀÏ¶§
+						else wsprintf(buf, "%s", "·Î±×ÀÎ½ÇÆÐ(ÀÜ¿©½Ã°£¾øÀ½)");
 					}
 				}
-				else wsprintf(buf, "%s", "·Î±×ÀÎ½ÇÆÐ");					//cmd¸¦ 40À¸·Î ¹ÞÀ¸¸é ½ÇÆÐ
+				else wsprintf(buf, "%s", "·Î±×ÀÎ½ÇÆÐ");					
 			}
+			////ÁÖ¹®°á°ú(°¡´É:2»óÇ°¹øÈ£(1,2,3)1/ºÒ°¡:2»óÇ°¹øÈ£(1,2,3)0)
 			else if (buf[0] == '2') {
+				//À½·á
 				if (buf[1] == '1') {
-					if (lstrcmp(orderbuf, TEXT("211")) == 0) {			//À½·á»óÇ°±¸¸ÅÃ³¸®
+					if (lstrcmp(orderbuf, TEXT("211")) == 0) {			
 						wsprintf(buf, "%s", "DRINK±¸ÀÔ¼º°ø");
 					}
-					else wsprintf(buf, "%s", "DRINK±¸ÀÔ½ÇÆÐ");			//¼­¹ö·ÎºÎÅÍ  "210" ¹Þ¾ÒÀ» ¶§
+					else wsprintf(buf, "%s", "DRINK±¸ÀÔ½ÇÆÐ");			
 				}
+				//½ÄÇ°
 				else if (buf[1] == '2') {
-					if (lstrcmp(orderbuf, TEXT("221")) == 0) {			//½ÄÇ°±¸¸ÅÃ³¸®
+					if (lstrcmp(orderbuf, TEXT("221")) == 0) {			
 						wsprintf(buf, "%s", "FOOD±¸ÀÔ¼º°ø");
 					}
-					else wsprintf(buf, "%s", "FOOD±¸ÀÔ½ÇÆÐ");			//¼­¹ö·ÎºÎÅÍ  "220" ¹Þ¾ÒÀ» ¶§
+					else wsprintf(buf, "%s", "FOOD±¸ÀÔ½ÇÆÐ");			
 				}
+				//PC
 				else if (buf[1] == '3') {
-					if (lstrcmp(orderbuf, TEXT("231")) == 0) {			//ÇÇ½Ã»óÇ°±¸¸ÅÃ³¸®
+					if (lstrcmp(orderbuf, TEXT("231")) == 0) {			
 						wsprintf(buf, "%s", "PC±¸ÀÔ¼º°ø");
 					}
-					else wsprintf(buf, "%s", "PC±¸ÀÔ½ÇÆÐ");				//¼­¹ö·ÎºÎÅÍ  "230" ¹Þ¾ÒÀ» ¶§
+					else wsprintf(buf, "%s", "PC±¸ÀÔ½ÇÆÐ");				
 				}
 			}
-			else if (buf[0] == '5') {														//·Î±×ÀÎ
+			//·Î±×¾Æ¿ô °á°ú(°¡´É:51/ºÒ°¡:50
+			else if (buf[0] == '5') {														
 				if (lstrcmp(buf, TEXT("51")) == 0) {
 					lstrcpy(userid, "");
 					wsprintf(buf, "%s", "·Î±×¾Æ¿ô¼º°ø");
 					chklogin = 0;
 				}
-				else 	wsprintf(buf, "%s", "·Î±×¾Æ¿ô½ÇÆÐ");				////¼­¹ö·ÎºÎÅÍ  "50" ¹Þ¾ÒÀ» ¶§
+				else 	wsprintf(buf, "%s", "·Î±×¾Æ¿ô½ÇÆÐ");				
 			}
-			else if (buf[0] == '6') {													//¼öÁ¤
+			//¼öÁ¤ °á°ú(°¡´É:61/ºÒ°¡:60)
+			else if (buf[0] == '6') {													
 				if (lstrcmp(buf, TEXT("61")) == 0) {
 					wsprintf(buf, "%s", "¼öÁ¤¼º°ø");
 				}
-				else wsprintf(buf, "%s", "¼öÁ¤½ÇÆÐ");						//¼­¹ö·ÎºÎÅÍ  "60" ¹Þ¾ÒÀ» ¶§
+				else wsprintf(buf, "%s", "¼öÁ¤½ÇÆÐ");						
 			}
-			else if (buf[0] == '7') {													//Å»Åð
+			//Å»Åð °á°ú(°¡´É:71/ºÒ°¡:70)
+			else if (buf[0] == '7') {													
 				if (lstrcmp(buf, TEXT("71")) == 0) {
-					wsprintf(buf, "%s", "Å»Åð¼º°ø");							//Å»ÅðµÇµµ Ã¢ ´ÝÁö ¸»±â
+					wsprintf(buf, "%s", "Å»Åð¼º°ø");							
 				}
-				else wsprintf(buf, "%s", "Å»Åð½ÇÆÐ");						//¼­¹ö·ÎºÎÅÍ  "70" ¹Þ¾ÒÀ» ¶§
+				else wsprintf(buf, "%s", "Å»Åð½ÇÆÐ");						
 			}
-			/*
-			else {
-				MessageBox(hWndMain, buf,"server¼ö½Å", MB_OK);					/////////////////////////////////////////////////////////////////// ¹ÚÁ¤Çö Å×½ºÆ® ¹®´Ü////////////////////////
-				// ÀÌÂÊ¿¡ ¼­¹ö¿¡¼­ º¸³»ÁØ µ¥ÀÌÅÍ¸¦ ±â¹ÝÀ¸·Î ¾ÉÀ»¼ö ÀÖ´Â ÁÂ¼®À» ¼±º°ÇÏ°í ¼±ÅÃÇÒ¼öÀÖ°Ô ¿äÃ»		
-			}
-			*/
-			if (lstrlen(buf) != 0) {//ÆÀÇÃ//¸ðµç ¸Þ¼¼Áö ³ªÅ¸³»±â
-				sprintf_s(strTemp, "¼ö½ÅÇÑ ¸Þ½ÃÁö:%s", buf);								//ÆÀÇÃ//À§¿¡¼­ cmd¸¦ º¯È¯ÇÑ ¸Þ¼¼Áö¸¦ ÇÁ·Î½ÃÀúÀÇ Ã¤ÆÃ ¿¡µðÆ®¿¡ ¶ç¿ì±â
+			//¼­¹ö·ÎºÎÅÍ ¹ÞÀº ¸Þ¼¼Áö¸¦ Ã¤ÆÃ ¿¡µðÆ®¿¡ "¼ö½ÅÇÑ ¸Þ¼¼Áö:+º¯È¯ÇÑ ¸Þ¼¼Áö"·Î ¶ç¿ì±â
+			if (lstrlen(buf) != 0) {
+				sprintf_s(strTemp, "¼ö½ÅÇÑ ¸Þ½ÃÁö:%s", buf);								
 				int len = GetWindowTextLength(hEdit_Chat);
 				SendMessage(hEdit_Chat, EM_SETSEL, (WPARAM)len, (LPARAM)len);
 				SendMessage(hEdit_Chat, EM_REPLACESEL, FALSE, (LPARAM)"\r\n");
-				SendMessage(hEdit_Chat, EM_REPLACESEL, FALSE, (LPARAM)strTemp);												//ÇÁ·Î½ÃÀúÀÇ Ã¤ÆÃ ¿¡µðÆ® ¾Æ·¡¹æÇâÀ¸·Î ÀÛ¼º ½ÃÅ°±â
+				SendMessage(hEdit_Chat, EM_REPLACESEL, FALSE, (LPARAM)strTemp);												
 			}
 		}
 	}
 	return 0;
 }
+//int APIENTRY WinMain(HINSTANCE, HINSTANCE, LPSTR, int):¸Þ´º ¼³Á¤, ¶ç¿ï ´Ù¸¥ ÇÁ·Î½ÃÀú ¼³Á¤
 int APIENTRY WinMain(HINSTANCE hinstance, HINSTANCE hPrevinstance, LPSTR lpszCmdParam, int nCmdShow)
 {
 	HWND hWnd;
@@ -293,7 +328,7 @@ int APIENTRY WinMain(HINSTANCE hinstance, HINSTANCE hPrevinstance, LPSTR lpszCmd
 	WndClass.hInstance = hinstance;
 	WndClass.lpfnWndProc = WndProc;
 	WndClass.lpszClassName = lpszClass;
-	WndClass.lpszMenuName = MAKEINTRESOURCE(IDR_MENU1);					//À©µµ¿ì ÇÁ·Î½ÃÀú¿¡ ¸Þ´º ´Þ±â
+	WndClass.lpszMenuName = MAKEINTRESOURCE(IDR_MENU1);																			//¸Þ´º´Þ±â
 	WndClass.style = CS_HREDRAW | CS_VREDRAW;
 	RegisterClass(&WndClass);
 
@@ -306,8 +341,8 @@ int APIENTRY WinMain(HINSTANCE hinstance, HINSTANCE hPrevinstance, LPSTR lpszCmd
 	}
 	return (int)Message.wParam;
 }
-
-void Init_Wnd(WNDCLASS* Wnd, int Proc_No) {													//À©µµ¿ìÇÁ·Î½ÃÀú¿¡¼­ ¶ç¿ï ´Ù¸¥ ÇÁ·Î½ÃÀú ¼³Á¤
+//void Init_Wnd(WNDCLASS*, int):À©µµ¿ìÇÁ·Î½ÃÀú¿¡¼­ ¶ç¿ï ´Ù¸¥ ÇÁ·Î½ÃÀú ¼³Á¤
+void Init_Wnd(WNDCLASS* Wnd, int Proc_No) {																										
 	if (Proc_No > 4) {
 		MessageBox(hWndMain, "À©µµ¿ì ÃÊ±âÈ­ ¿À·ù!", "¾Ë¸²", MB_OK);
 		return;
@@ -322,34 +357,35 @@ void Init_Wnd(WNDCLASS* Wnd, int Proc_No) {													//À©µµ¿ìÇÁ·Î½ÃÀú¿¡¼­ ¶ç¿
 	switch (Proc_No)
 	{
 	case 0:
-		Wnd->lpfnWndProc = ConnectProc;																	//¿¬°áÈ­¸é
+		Wnd->lpfnWndProc = ConnectProc;																																//¿¬°áÈ­¸é
 		Wnd->lpszClassName = C_Class;
 		break;
-	case 1:																													//°¡ÀÔ/¼öÁ¤È­¸é
+	case 1:																																												//°¡ÀÔ/¼öÁ¤È­¸é
 		Wnd->lpfnWndProc = Join_Or_UpdateProc;
 		Wnd->lpszClassName = JU_Class;
 		break;
-	case 2:																													//·Î±×ÀÎÈ­¸é
+	case 2:																																												//·Î±×ÀÎÈ­¸é
 		Wnd->lpfnWndProc = LoginProc;
 		Wnd->lpszClassName = L_Class;
 		break;
-	case 3:																													//ÀÚ¸®¼±ÅÃÈ­¸é
+	case 3:																																												//ÀÚ¸®¼±ÅÃÈ­¸é
 		Wnd->lpfnWndProc = SelSeatProc;
 		Wnd->lpszClassName = S_Class;
 		break;
-	case 4:																													//ÁÖ¹®È­¸é
+	case 4:																																												//ÁÖ¹®È­¸é
 		Wnd->lpfnWndProc = OrderProc;
 		Wnd->lpszClassName = O_Class;
 		break;
 	}
-	Wnd->lpszMenuName = NULL;																				//¶ç¿ï ´Ù¸¥ ÇÁ·Î½ÃÀú¿¡ ¸Þ´º´Â ¾øÀ½
+	Wnd->lpszMenuName = NULL;																																			//¶ç¿ï ´Ù¸¥ ÇÁ·Î½ÃÀú¿¡ ¸Þ´º´Â ¾øÀ½
 	Wnd->style = CS_HREDRAW | CS_VREDRAW;
 
 	RegisterClass(Wnd);
 }
-void CLIENT_Open() {																								//¼ÒÄÏ ¿¬°á ÇÔ¼ö
-	GetWindowText(hEdit_Ip, tgIp, sizeof(tgIp));												//¿¬°áÀÇ IP¿¡µðÆ®¿¡¼­ ³»¿ë °¡Á®¿À±â
-	GetWindowText(hEdit_Port, tgPort, sizeof(tgPort));										//¿¬°áÀÇ PORT¿¡µðÆ®¿¡¼­ ³»¿ë °¡Á®¿À±â
+//void CLIENT_Open():¼ÒÄÏ ¿¬°á ÇÔ¼ö(¿¬°á½º·¹µå ¸¸µé±â)
+void CLIENT_Open() {																								
+	GetWindowText(hEdit_Ip, tgIp, sizeof(tgIp));																												//¿¬°áÀÇ IP¿¡µðÆ®¿¡¼­ ³»¿ë °¡Á®¿À±â
+	GetWindowText(hEdit_Port, tgPort, sizeof(tgPort));																										//¿¬°áÀÇ PORT¿¡µðÆ®¿¡¼­ ³»¿ë °¡Á®¿À±â
 	nip = atoi(tgIp);
 	nport = atoi(tgPort);
 	nReturn = WSAStartup(WORD(2.0), &wsadata);
@@ -357,15 +393,16 @@ void CLIENT_Open() {																								//¼ÒÄÏ ¿¬°á ÇÔ¼ö
 	addr_client.sin_family = AF_INET;
 	addr_client.sin_addr.s_addr = inet_addr(tgIp);
 	addr_client.sin_port = htons(nport);
-	hThread = CreateThread(NULL, 0, ThreadFunc, &clientsock, 0, &ThreadID);						//¿¬°á½º·¹µå ¸¸µé±â
+	hThread = CreateThread(NULL, 0, ThreadFunc, &clientsock, 0, &ThreadID);																	//¿¬°á½º·¹µå ¸¸µé±â
 	nReturn = connect(clientsock, (sockaddr*)&addr_client, addrlen_clt);
 	if (!nReturn) {
 		int len = GetWindowTextLength(hEdit_Chat);
 		SendMessage(hEdit_Chat, EM_SETSEL, (WPARAM)len, (LPARAM)len);
 		SendMessage(hEdit_Chat, EM_REPLACESEL, FALSE, (LPARAM)TEXT("\r\n"));
-		SendMessage(hEdit_Chat, EM_REPLACESEL, FALSE, (LPARAM)TEXT("ÀÔÀåÇÏ¿´½À´Ï´Ù."));						//¿¬°áÇßÀ¸¸é ÇÁ·Î½ÃÀúÀÇ Ã¤ÆÃ ¿¡µðÆ®¿¡ "¿¬°á" ¸Þ¼¼Áö ¶ç¿ì±â
+		SendMessage(hEdit_Chat, EM_REPLACESEL, FALSE, (LPARAM)TEXT("ÀÔÀåÇÏ¿´½À´Ï´Ù."));										//¼º°øÇÏ¸é Ã¤ÆÃ ¿¡µðÆ®¿¡ ¸Þ¼¼Áö ¶ç¿ì±â
 	}
 }
+//LRESULT CALLBACK WndProc(HWND, UINT, WPARAM, LPARAM):±âº»È­¸é(´Ù¸¥ È­¸é ¼³Á¤,·Î±×ÀÎµ¿ÀÛÀÇ Å¸ÀÌ¸Ó ¼öÇà)
 LRESULT CALLBACK WndProc(HWND hWnd, UINT iMessage, WPARAM wParam, LPARAM lParam) {
 
 	switch (iMessage) {
@@ -374,23 +411,26 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT iMessage, WPARAM wParam, LPARAM lParam)
 		InitCommonControls();
 
 		//¶ç¿ï ´Ù¸¥ È­¸éµé
-		WNDCLASS Wnd_C;				//¿¬°á
-		WNDCLASS Wnd_JU;				//°¡ÀÔ/¼öÁ¤
-		WNDCLASS Wnd_L;				//·Î±×ÀÎ
-		WNDCLASS Wnd_S;				//ÀÚ¸®¼±ÅÃ
-		WNDCLASS Wnd_O;				//ÁÖ¹®
+		WNDCLASS Wnd_C;																															//¿¬°á
+		WNDCLASS Wnd_JU;																															//°¡ÀÔ/¼öÁ¤
+		WNDCLASS Wnd_L;																															//·Î±×ÀÎ
+		WNDCLASS Wnd_S;																															//ÀÚ¸®¼±ÅÃ
+		WNDCLASS Wnd_O;																															//ÁÖ¹®
 
-		// ¿¬°áÀ©µµ¿ì ¼³Á¤
+		///À©µµ¿ì ¼³Á¤
+		//¿¬°á
 		Init_Wnd(&Wnd_C, 0);
-		// °¡ÀÔ/¼öÁ¤ À©µµ¿ì ¼³Á¤
+		// °¡ÀÔ/¼öÁ¤
 		Init_Wnd(&Wnd_JU, 1);
-		// ·Î±×ÀÎÀ©µµ¿ì ¼³Á¤
+		// ·Î±×ÀÎ
 		Init_Wnd(&Wnd_L, 2);
-		// ÀÚ¸®À©µµ¿ì ¼³Á¤
+		// ÀÚ¸®
 		Init_Wnd(&Wnd_S, 3);
-		// ÁÖ¹®À©µµ¿ì ¼³Á¤
+		// ÁÖ¹®
 		Init_Wnd(&Wnd_O, 4);
+		///
 
+		///ÄÁÆ®·Ñ
 		//Ã¤ÆÃ ¿¡µðÆ®
 		hEdit_Chat = CreateWindow(TEXT("edit"), NULL, WS_CHILD | WS_VISIBLE | WS_BORDER | ES_AUTOHSCROLL| ES_MULTILINE,			
 			10, 100, 500, 400, hWnd, (HMENU)ID_E_CHAT, g_hInst, NULL);									
@@ -409,18 +449,20 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT iMessage, WPARAM wParam, LPARAM lParam)
 		//Å¸ÀÌ¸Ó ½ºÅÂÆ½
 		hStatic_Timer = CreateWindow(TEXT("static"), TEXT("TIME"), WS_CHILD | WS_VISIBLE | WS_BORDER | ES_AUTOHSCROLL,
 			610, 150, 40, 20, hWnd, (HMENU)ID_S_TIMER, g_hInst, NULL);
-		//Å¸ÀÌ¸Ó
-		SetTimer(hWnd, 1, 1000, NULL);			//·Î±×ÀÎ À¯Àú ½Ã°£ Å¸ÀÌ¸Ó
-		SetTimer(hWnd, 2, 1000, NULL);			//·Î±×ÀÎ À¯Àú ½Ã°£ Å¸ÀÌ¸Ó Á¾·áÇÏ´Â Å¸ÀÌ¸Ó
+		///
+		//Å¸ÀÌ¸Ó(·Î±×ÀÎ ½Ã ¼öÇà)
+		SetTimer(hWnd, 1, 1000, NULL);			//½Ã°£ Å¸ÀÌ¸Ó
+		SetTimer(hWnd, 2, 1000, NULL);			//½Ã°£ Å¸ÀÌ¸Ó Á¾·áÇÏ´Â Å¸ÀÌ¸Ó
 		return 0;
 	case WM_TIMER:
 		switch (wParam) {
-		case 1:												//³²Àº ½Ã°£ Å¸ÀÌ¸Ó
+			//³²Àº ½Ã°£ Å¸ÀÌ¸Ó(0ÀÌ µÉ¶§±îÁö ½Ã°£ °¨¼ÒÇÏ°í 0ÀÌ¸é ·Î±×¾Æ¿ôÃ³¸®ÇÏ±â)
+		case 1:												
 			if (chktimer == 1) {
-				pctime -= 1;										//³²Àº½Ã°£ ÁÙÀÌ±â
+				pctime -= 1;										
 				wsprintf(tpctime, "%d", pctime);
-				SetWindowText(hEdit_Timer, tpctime);															//ÇÁ·Î½ÃÀúÀÇ Å¸ÀÌ¸Ó ¿¡µðÆ®¿¡ À¯Àú ³²Àº ½Ã°£ Ãâ·Â
-				if (pctime == 0) {																				//ÆÀÇÃ//½Ã°£ 0ÀÏ¶§ ·Î±×¾Æ¿ôÃ³¸®
+				SetWindowText(hEdit_Timer, tpctime);																						//ÇÁ·Î½ÃÀúÀÇ Å¸ÀÌ¸Ó ¿¡µðÆ®¿¡ À¯Àú ³²Àº ½Ã°£ Ãâ·Â
+				if (pctime == 0) {																				
 					wsprintf(tpctime, "%d", pctime);
 					SetWindowText(hEdit_Timer, tpctime);
 					lstrcpy(tgcmdserver, "");
@@ -430,48 +472,50 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT iMessage, WPARAM wParam, LPARAM lParam)
 					lstrcat(tgcmdserver, userpw);
 					lstrcat(tgcmdserver, "SN:");
 					lstrcat(tgcmdserver, usersn);
-					chkendbtn = 1;																				//·Î±×¾Æ¿ô/Å»Åð Ã³¸®·Î 
-					chklogin = 0;																					//·Î±×¾Æ¿ô µÈ »óÅÂ·Î
+					chkendbtn = 1;																															//·Î±×¾Æ¿ô/Å»Åð Ã³¸®·Î 
+					chklogin = 0;																																//·Î±×¾Æ¿ô µÈ »óÅÂ·Î
 					nReturn = send(clientsock, tgcmdserver, sizeof(tgcmdserver), 0);
-					chktimer = 0;																				//Å¸ÀÌ¸Ó ²ô´Â »óÅÂ·Î
+					chktimer = 0;																															//Å¸ÀÌ¸Ó ²ô´Â »óÅÂ·Î
 					break;
 				}
 			}
 			break;
-		case 2:																//³ª°¡±â¹öÆ° ´­·ÈÀ»¶§/³²Àº½Ã°£ 0ÀÏ¶§ ³²Àº½Ã°£ Å¸ÀÌ¸Ó Á¾·áÇÏ°í ´Ù½Ã Å¸ÀÌ¸Ó ¸¸µé±â(·Î±×ÀÎÀ» °è¼Ó ¹Þ±â À§ÇØ)
+			//³ª°¡±â¹öÆ° ´­·ÈÀ»¶§/³²Àº½Ã°£ 0ÀÏ¶§ ³²Àº½Ã°£ Å¸ÀÌ¸Ó Á¾·áÇÏ°í ´Ù½Ã Å¸ÀÌ¸Ó ¸¸µé±â(·Î±×ÀÎÀ» °è¼Ó ¹Þ±â À§ÇØ)
+		case 2:																
 			if (chkendbtn == 1) {
-				KillTimer(hWnd, 1);											//Å¸ÀÌ¸Ó ²ô±â
-				chktimer = 0;													//Å¸ÀÌ¸Ó ²ô´Â »óÅÂ·Î
-				SetTimer(hWnd, 1, 1000, NULL);					//À¯Àú ³²Àº ½Ã°£ Å¸ÀÌ¸Ó ´Ù½Ã »ý¼º
-				chkendbtn = 0;												//·Î±×¾Æ¿ô Ã¼Å© ´Ù½Ã ¿ø·¡ ´ë·Î ÃÊ±âÈ­
+				KillTimer(hWnd, 1);																														//Å¸ÀÌ¸Ó ²ô±â
+				chktimer = 0;																																//Å¸ÀÌ¸Ó ²ô´Â »óÅÂ·Î
+				SetTimer(hWnd, 1, 1000, NULL);																									//À¯Àú ³²Àº ½Ã°£ Å¸ÀÌ¸Ó ´Ù½Ã »ý¼º
+				chkendbtn = 0;																																//·Î±×¾Æ¿ô Ã¼Å© ´Ù½Ã ¿ø·¡ ´ë·Î ÃÊ±âÈ­
 				pctime = 0;
 				wsprintf(tpctime, "%d", pctime);
-				SetWindowText(hEdit_Timer, tpctime); //ÇÁ·Î½ÃÀúÀÇ Å¸ÀÌ¸Ó ¿¡µðÆ®¿¡ À¯Àú ³²Àº ½Ã°£ 0À¸·Î  Ãâ·Â
+				SetWindowText(hEdit_Timer, tpctime);																						//ÇÁ·Î½ÃÀúÀÇ Å¸ÀÌ¸Ó ¿¡µðÆ®¿¡ À¯Àú ³²Àº ½Ã°£ 0À¸·Î  Ãâ·Â
 			}
 			break;
 		}
 		return 0;
 
+		//¸Þ´º ´©¸£¸é ÇØ´ç ÇÁ·Î½ÃÀú ¶ç¿ì±â
 	case WM_COMMAND:
 		switch (LOWORD(wParam))
 		{
 
-		case ID_M_CONNECT:									//¿¬°á ¿ÀÇÂ
+		case ID_M_CONNECT:																																		//¿¬°á ¿ÀÇÂ
 			hWnd_C = CreateWindow(C_Class, C_Class, WS_VISIBLE | WS_OVERLAPPEDWINDOW, CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT, NULL, (HMENU)NULL, g_hInst, NULL);
 			ShowWindow(hWnd_C, SW_SHOW);
 			break;
-		case ID_M_DISCONNECT:								//ÇØÁ¦ ´­·ÈÀ»¶§
-			SendMessage(hWndMain, WM_CLOSE, 0, 0);				//Ã¢´Ý±â
+		case ID_M_DISCONNECT:																																	//ÇØÁ¦ ´­·ÈÀ»¶§
+			SendMessage(hWndMain, WM_CLOSE, 0, 0);																									//Ã¢´Ý±â
 			break;
-		case ID_M_JOIN_OR_UPDATE:		// °¡ÀÔ/¼öÁ¤ ¿ÀÇÂ
-			if (chkseat == 1) {							//ÀÚ¸® ¼±ÅÃ ¼öÇàÇßÀ»¶§
+		case ID_M_JOIN_OR_UPDATE:																														// °¡ÀÔ/¼öÁ¤ ¿ÀÇÂ(ÀÚ¸® ¼±ÅÃ ¼öÇàÇßÀ»¶§)
+			if (chkseat == 1) {																																				
 				hWnd_JU = CreateWindow(JU_Class, JU_Class, WS_VISIBLE | WS_OVERLAPPEDWINDOW, CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT, NULL, (HMENU)NULL, g_hInst, NULL);
 				ShowWindow(hWnd_JU, SW_SHOW);
 			}
 			else MessageBox(hWnd, "ÀÚ¸® ¼±ÅÃ ¸ÕÀú ÇÏ¼¼¿ä!!", "¿À·ù", MB_OK);
 			break;
-		case ID_M_LOGIN:		// ·Î±×ÀÎ ¿ÀÇÂ
-			if (chkseat == 1 && chklogin == 0) {//ÀÚ¸®¼±ÅÃ°ú ·Î±×ÀÎ ¼öÇàÇßÀ»¶§
+		case ID_M_LOGIN:																																				// ·Î±×ÀÎ ¿ÀÇÂ(ÀÚ¸®¼±ÅÃ°ú ·Î±×ÀÎ ¼öÇàÇßÀ»¶§)
+			if (chkseat == 1 && chklogin == 0)	{																													
 				hWnd_L = CreateWindow(L_Class, L_Class, WS_VISIBLE | WS_OVERLAPPEDWINDOW, CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT, NULL, (HMENU)NULL, g_hInst, NULL);
 				ShowWindow(hWnd_L, SW_SHOW);
 			}
@@ -480,19 +524,19 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT iMessage, WPARAM wParam, LPARAM lParam)
 				if (chklogin == 1)MessageBox(hWnd, "·Î±×ÀÎ µÇ¾î ÀÖ½À´Ï´Ù!!", "¿À·ù", MB_OK);
 			}
 			break;
-		case ID_M_SELSEAT:		// ÀÚ¸®¼±ÅÃ ¿ÀÇÂ
+		case ID_M_SELSEAT:																																			// ÀÚ¸®¼±ÅÃ ¿ÀÇÂ
 			hWnd_S = CreateWindow(S_Class, S_Class, WS_VISIBLE | WS_OVERLAPPEDWINDOW, CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT, NULL, (HMENU)NULL, g_hInst, NULL);
 			ShowWindow(hWnd_S, SW_SHOW);
 			break;
-		case ID_M_ORDER:		// ÁÖ¹® ¿ÀÇÂ
-			if (chkseat == 1) {			//ÀÚ¸®¼±ÅÃÇßÀ»¶§
+		case ID_M_ORDER:																																				// ÁÖ¹® ¿ÀÇÂ(ÀÚ¸®¼±ÅÃÇßÀ»¶§)
+			if (chkseat == 1) {																																				
 				hWnd_O = CreateWindow(O_Class, O_Class, WS_VISIBLE | WS_OVERLAPPEDWINDOW, CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT, NULL, (HMENU)NULL, g_hInst, NULL);
 				ShowWindow(hWnd_O, SW_SHOW);
 			}
 			else MessageBox(hWnd, "ÀÚ¸® ¼±ÅÃ ¸ÕÀú ÇÏ¼¼¿ä!!", "¿À·ù", MB_OK);
 			break;
-		case ID_B_LOGOUT:							//·Î±×¾Æ¿ô
-			if (chklogin == 1) {							//·Î±×ÀÎ ÇßÀ»¶§
+		case ID_B_LOGOUT:																																			//·Î±×¾Æ¿ô(·Î±×ÀÎ ÇßÀ»¶§)
+			if (chklogin == 1) {																																				
 				lstrcpy(tgcmdserver, "");
 				lstrcpy(tgcmdserver, "5ID:");
 				lstrcat(tgcmdserver, userid);
@@ -500,16 +544,16 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT iMessage, WPARAM wParam, LPARAM lParam)
 				lstrcat(tgcmdserver, userpw);
 				lstrcat(tgcmdserver, "SN:");
 				lstrcat(tgcmdserver, usersn);
-				chkendbtn = 1;											//·Î±×¾Æ¿ô/Å»Åð ¼öÇà ÇßÀ»¶§
-				nReturn = send(clientsock, tgcmdserver, sizeof(tgcmdserver), 0);					//¼­¹ö·Î ·Î±×¾Æ¿ô Ä¿¸àµå º¸³»±â
+				chkendbtn = 1;																																				//·Î±×¾Æ¿ô/Å»Åð ¼öÇà ÇßÀ»¶§·Î
+				nReturn = send(clientsock, tgcmdserver, sizeof(tgcmdserver), 0);																//¼­¹ö·Î ·Î±×¾Æ¿ô Ä¿¸àµå º¸³»±â
 				pctime = 0;										
 				wsprintf(tpctime, "%d", pctime);
-				SetWindowText(hEdit_Timer, tpctime);																	//ÇÁ·Î½ÃÀúÀÇ Å¸ÀÌ¸Ó ¿¡µðÆ®¿¡ À¯Àú ³²Àº ½Ã°£ 0À¸·Î Ãâ·Â
+				SetWindowText(hEdit_Timer, tpctime);																										//ÇÁ·Î½ÃÀúÀÇ Å¸ÀÌ¸Ó ¿¡µðÆ®¿¡ À¯Àú ³²Àº ½Ã°£ 0À¸·Î Ãâ·Â
 			}
 			else MessageBox(hWnd, "·Î±×ÀÎÇÏ¼¼¿ä!!", "¿À·ù", MB_OK);
 			break;
-		case ID_B_DELETE:																			//Å»Åð ¼öÇà
-			if (chklogin == 1) {													//·Î±×ÀÎ ÇßÀ»¶§
+		case ID_B_DELETE:																																			//Å»Åð ¼öÇà(·Î±×ÀÎ ÇßÀ»¶§)
+			if (chklogin == 1) {																																			
 				lstrcpy(tgcmdserver, "");
 				lstrcpy(tgcmdserver, "7ID:");
 				lstrcat(tgcmdserver, userid);
@@ -517,11 +561,11 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT iMessage, WPARAM wParam, LPARAM lParam)
 				lstrcat(tgcmdserver, userpw);
 				lstrcat(tgcmdserver, "SN:");
 				lstrcat(tgcmdserver, usersn);
-				chkendbtn = 1;											//·Î±×¾Æ¿ô/Å»Åð ¼öÇà ÇßÀ»¶§
-				nReturn = send(clientsock, tgcmdserver, sizeof(tgcmdserver), 0);						//¼­¹ö·Î Å»Åð Ä¿¸Çµå º¸³»±â
+				chkendbtn = 1;																																				//·Î±×¾Æ¿ô/Å»Åð ¼öÇà ÇßÀ»¶§·Î
+				nReturn = send(clientsock, tgcmdserver, sizeof(tgcmdserver), 0);																//¼­¹ö·Î Å»Åð Ä¿¸Çµå º¸³»±â
 				pctime = 0;
 				wsprintf(tpctime, "%d", pctime);
-				SetWindowText(hEdit_Timer, tpctime);												//ÇÁ·Î½ÃÀúÀÇ Å¸ÀÌ¸Ó ¿¡µðÆ®¿¡ À¯Àú ³²Àº ½Ã°£ 0À¸·Î Ãâ·Â
+				SetWindowText(hEdit_Timer, tpctime);																										//ÇÁ·Î½ÃÀúÀÇ Å¸ÀÌ¸Ó ¿¡µðÆ®¿¡ À¯Àú ³²Àº ½Ã°£ 0À¸·Î Ãâ·Â
 			}
 			else MessageBox(hWnd, "·Î±×ÀÎÇÏ¼¼¿ä!!", "¿À·ù", MB_OK);
 			break;
@@ -534,9 +578,11 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT iMessage, WPARAM wParam, LPARAM lParam)
 	}
 	return(DefWindowProc(hWnd, iMessage, wParam, lParam));
 }
-LRESULT CALLBACK ConnectProc(HWND hWnd, UINT iMessage, WPARAM wParam, LPARAM lParam) {					//¿¬°áÈ­¸é
+//LRESULT CALLBACK ConnectProc(HWND, UINT, WPARAM, LPARAM):¿¬°áÈ­¸é(¿¬°á ¼öÇà)
+LRESULT CALLBACK ConnectProc(HWND hWnd, UINT iMessage, WPARAM wParam, LPARAM lParam) {					
 	switch (iMessage) {
 	case WM_CREATE:
+		///ÄÁÆ®·Ñ
 		//¾ÆÀÌÇÇ ½ºÅÂÆ½
 		hStatic_Ip = CreateWindow(TEXT("static"), TEXT("IP"), WS_CHILD | WS_VISIBLE | WS_BORDER | ES_AUTOHSCROLL,
 			10, 0, 20, 20, hWnd, (HMENU)ID_S_IP, g_hInst, NULL);
@@ -552,6 +598,7 @@ LRESULT CALLBACK ConnectProc(HWND hWnd, UINT iMessage, WPARAM wParam, LPARAM lPa
 		//¿¬°á ¹öÆ°
 		hButton_Connect = CreateWindow(TEXT("button"), TEXT("CONNECT"), WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON,
 			310, 200, 400, 100, hWnd, (HMENU)ID_B_CONNECT,g_hInst, NULL);
+		///
 		//¿¬°áÀÇ IP¿Í PORT¿¡µðÆ®¿¡ ¶ç¿ì±â
 		SetWindowText(hEdit_Ip, tgIp);
 		SetWindowText(hEdit_Port, tgPort);
@@ -559,7 +606,7 @@ LRESULT CALLBACK ConnectProc(HWND hWnd, UINT iMessage, WPARAM wParam, LPARAM lPa
 	case WM_COMMAND:
 		switch (LOWORD(wParam))
 		{
-		case ID_B_CONNECT:					//¿¬°áÀÇ ¿¬°á ¹öÆ° ´­·ÈÀ»¶§ ¿¬°á ¼öÇà
+		case ID_B_CONNECT:																																			//¿¬°á ¹öÆ° ´­·ÈÀ»¶§ ¿¬°á ¼öÇà
 			CLIENT_Open();
 			break;
 		}
@@ -569,9 +616,11 @@ LRESULT CALLBACK ConnectProc(HWND hWnd, UINT iMessage, WPARAM wParam, LPARAM lPa
 	}
 	return(DefWindowProc(hWnd, iMessage, wParam, lParam));
 }
-LRESULT CALLBACK Join_Or_UpdateProc(HWND hWnd, UINT iMessage, WPARAM wParam, LPARAM lParam) {									//°¡ÀÔ/¼öÁ¤
+//LRESULT CALLBACK Join_Or_UpdateProc(HWND, UINT, WPARAM, LPARAM):°¡ÀÔ/¼öÁ¤È­¸é(°¡ÀÔ/¼öÁ¤ ¼öÇàÇÏ°í ·Î±×ÀÎµÈ À¯ÀúÀÇ Á¤º¸¸¦ ¶ç¿ì±â)
+LRESULT CALLBACK Join_Or_UpdateProc(HWND hWnd, UINT iMessage, WPARAM wParam, LPARAM lParam) {									
 	switch (iMessage) {
 	case WM_CREATE:
+		///ÄÁÆ®·Ñ
 		//¾ÆÀÌµð ½ºÅÂÆ½
 		hStatic_Id = CreateWindow(TEXT("static"), TEXT("ID"), WS_CHILD | WS_VISIBLE | WS_BORDER | ES_AUTOHSCROLL,
 			10, 0, 40, 20, hWnd, (HMENU)ID_S_ID, g_hInst, NULL);
@@ -614,33 +663,35 @@ LRESULT CALLBACK Join_Or_UpdateProc(HWND hWnd, UINT iMessage, WPARAM wParam, LPA
 		//¼öÁ¤ ¹öÆ°
 		hButton_Update = CreateWindow(TEXT("button"), TEXT("UPDATE"), WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON,
 			910, 300, 300, 200, hWnd, (HMENU)ID_B_UPDATE, g_hInst, NULL);
+		///
 		//·Î±×ÀÎ µÈ À¯Àú Á¤º¸ ¶ç¿ì±â
-		SetWindowText(hEdit_Id, userid);						//¾ÆÀÌµð
-		SetWindowText(hEdit_Pw, userpw);					//ºñ¹ø
-		SetWindowText(hEdit_Name, tgName);				//ÀÌ¸§
-		SetWindowText(hEdit_Pn, tgPn);							//ÀüÈ­¹øÈ£
-		SetWindowText(hEdit_Addr, tgAddr);				//ÁÖ¼Ò
-		SetWindowText(hEdit_Birth, tgBirth);				//»ýÀÏ
+		SetWindowText(hEdit_Id, userid);																													//¾ÆÀÌµð
+		SetWindowText(hEdit_Pw, userpw);																												//ºñ¹ø
+		SetWindowText(hEdit_Name, tgName);																											//ÀÌ¸§
+		SetWindowText(hEdit_Pn, tgPn);																														//ÀüÈ­¹øÈ£
+		SetWindowText(hEdit_Addr, tgAddr);																											//ÁÖ¼Ò
+		SetWindowText(hEdit_Birth, tgBirth);																											//»ýÀÏ
 		return 0;
 	case WM_COMMAND:
 		switch (LOWORD(wParam))
 		{
-		case ID_B_JOIN:											//°¡ÀÔ ¹öÆ° ´­·ÈÀ»¶§
+			//°¡ÀÔ¹öÆ° ´­·ÈÀ»¶§
+		case ID_B_JOIN:																																		
 			//Ä¿¸Çµå,°èÁ¤ Á¤º¸ ¹®ÀÚ¿­ ºóÄ­À¸·Î ÃÊ±âÈ­
-			lstrcpy(tgcmdserver, "");			//¼­¹ö¿ÍÀÇ Ä¿¸Çµå
-			lstrcpy(tgId, "");						//¾ÆÀÌµð
-			lstrcpy(tgName, "");					//ÀÌ¸§
-			lstrcpy(tgPw, "");						//ºñ¹ø
-			lstrcpy(tgPn, "");						//ÀüÈ­¹øÈ£
-			lstrcpy(tgAddr, "");					//ÁÖ¼Ò
-			lstrcpy(tgBirth, "");					//»ýÀÏ
+			lstrcpy(tgcmdserver, "");																																//¼­¹ö¿ÍÀÇ Ä¿¸Çµå
+			lstrcpy(tgId, "");																																			//¾ÆÀÌµð
+			lstrcpy(tgName, "");																																		//ÀÌ¸§
+			lstrcpy(tgPw, "");																																			//ºñ¹ø
+			lstrcpy(tgPn, "");																																			//ÀüÈ­¹øÈ£
+			lstrcpy(tgAddr, "");																																		//ÁÖ¼Ò
+			lstrcpy(tgBirth, "");																																		//»ýÀÏ
 			//°èÁ¤ Á¤º¸ ¿¡µðÆ®¿¡¼­ Á¤º¸ ¹®ÀÚ¿­¿¡ ´ã±â
-			GetWindowText(hEdit_Id, tgId, sizeof(tgId));					//¾ÆÀÌµð
-			GetWindowText(hEdit_Name,tgName, sizeof(tgName));		//ÀÌ¸§
-			GetWindowText(hEdit_Pw,  tgPw, sizeof(tgPw));					//ºñ¹ø
-			GetWindowText(hEdit_Pn,  tgPn, sizeof(tgPn));					//ÀüÈ­¹øÈ£
-			GetWindowText(hEdit_Addr, tgAddr, sizeof(tgAddr));		//ÁÖ¼Ò
-			GetWindowText(hEdit_Birth, tgBirth, sizeof(tgBirth));		//»ýÀÏ
+			GetWindowText(hEdit_Id, tgId, sizeof(tgId));					
+			GetWindowText(hEdit_Name,tgName, sizeof(tgName));		
+			GetWindowText(hEdit_Pw,  tgPw, sizeof(tgPw));					
+			GetWindowText(hEdit_Pn,  tgPn, sizeof(tgPn));					
+			GetWindowText(hEdit_Addr, tgAddr, sizeof(tgAddr));		
+			GetWindowText(hEdit_Birth, tgBirth, sizeof(tgBirth));		
 			lstrcpy(tgcmdserver, "3ID:");
 			lstrcat(tgcmdserver, tgId);
 			lstrcat(tgcmdserver, "PW:");
@@ -653,24 +704,25 @@ LRESULT CALLBACK Join_Or_UpdateProc(HWND hWnd, UINT iMessage, WPARAM wParam, LPA
 			lstrcat(tgcmdserver, tgAddr);
 			lstrcat(tgcmdserver, "BIRTH:");
 			lstrcat(tgcmdserver, tgBirth);
-			nReturn = send(clientsock, tgcmdserver, sizeof(tgcmdserver), 0);								//¼­¹ö·Î °¡ÀÔ Ä¿¸Çµå º¸³»±â
+			nReturn = send(clientsock, tgcmdserver, sizeof(tgcmdserver), 0);																	//¼­¹ö·Î °¡ÀÔ Ä¿¸Çµå º¸³»±â
 			break;
-		case ID_B_UPDATE:																				//¼öÁ¤ ¹öÆ° ´­·ÈÀ»¶§
+			//¼öÁ¤¹öÆ° ´­·ÈÀ»¶§
+		case ID_B_UPDATE:																			
 			//Ä¿¸Çµå,°èÁ¤ Á¤º¸ ¹®ÀÚ¿­ ºóÄ­À¸·Î ÃÊ±âÈ­
-			lstrcpy(tgcmdserver, "");					//Ä¿¸Çµå
-			lstrcpy(tgId, "");								//¾ÆÀÌµð
-			lstrcpy(tgName, "");							//ÀÌ¸§
-			lstrcpy(tgPw, "");								//ºñ¹ø
-			lstrcpy(tgPn, "");								//ÀüÈ­¹øÈ£
-			lstrcpy(tgAddr, "");							//ÁÖ¼Ò
-			lstrcpy(tgBirth, "");							//»ýÀÏ
+			lstrcpy(tgcmdserver, "");																																	//Ä¿¸Çµå
+			lstrcpy(tgId, "");																																				//¾ÆÀÌµð
+			lstrcpy(tgName, "");																																			//ÀÌ¸§
+			lstrcpy(tgPw, "");																																				//ºñ¹ø
+			lstrcpy(tgPn, "");																																				//ÀüÈ­¹øÈ£
+			lstrcpy(tgAddr, "");																																			//ÁÖ¼Ò
+			lstrcpy(tgBirth, "");																																			//»ýÀÏ
 			//°èÁ¤ Á¤º¸ ¿¡µðÆ®¿¡¼­ Á¤º¸ ¹®ÀÚ¿­¿¡ ´ã±â
-			GetWindowText(hEdit_Id, tgId, sizeof(tgId));								//¾ÆÀÌµð
-			GetWindowText(hEdit_Name, tgName, sizeof(tgName));				//ÀÌ¸§
-			GetWindowText(hEdit_Pw, tgPw, sizeof(tgPw));								//ºñ¹ø
-			GetWindowText(hEdit_Pn, tgPn, sizeof(tgPn));								//ÀüÈ­¹øÈ£
-			GetWindowText(hEdit_Addr, tgAddr, sizeof(tgAddr));					//ÁÖ¼Ò
-			GetWindowText(hEdit_Birth, tgBirth, sizeof(tgBirth));					//»ýÀÏ
+			GetWindowText(hEdit_Id, tgId, sizeof(tgId));								
+			GetWindowText(hEdit_Name, tgName, sizeof(tgName));				
+			GetWindowText(hEdit_Pw, tgPw, sizeof(tgPw));								
+			GetWindowText(hEdit_Pn, tgPn, sizeof(tgPn));								
+			GetWindowText(hEdit_Addr, tgAddr, sizeof(tgAddr));					
+			GetWindowText(hEdit_Birth, tgBirth, sizeof(tgBirth));					
 			lstrcpy(tgcmdserver, "6ID:");
 			lstrcat(tgcmdserver, tgId);
 			lstrcat(tgcmdserver, "PW:");
@@ -683,7 +735,7 @@ LRESULT CALLBACK Join_Or_UpdateProc(HWND hWnd, UINT iMessage, WPARAM wParam, LPA
 			lstrcat(tgcmdserver, tgAddr);
 			lstrcat(tgcmdserver, "BIRTH:");
 			lstrcat(tgcmdserver, tgBirth);
-			nReturn = send(clientsock, tgcmdserver, sizeof(tgcmdserver), 0);												//¼­¹ö·Î ¼öÁ¤ Ä¿¸Çµå º¸³»±â
+			nReturn = send(clientsock, tgcmdserver, sizeof(tgcmdserver), 0);																			//¼­¹ö·Î ¼öÁ¤ Ä¿¸Çµå º¸³»±â
 			break;
 		}
 		return 0;
@@ -692,9 +744,11 @@ LRESULT CALLBACK Join_Or_UpdateProc(HWND hWnd, UINT iMessage, WPARAM wParam, LPA
 	}
 	return(DefWindowProc(hWnd, iMessage, wParam, lParam));
 }
+//LRESULT CALLBACK LoginProc(HWND, UINT, WPARAM, LPARAM):·Î±×ÀÎÈ­¸é(·Î±×ÀÎ ¼öÇà)
 LRESULT CALLBACK LoginProc(HWND hWnd, UINT iMessage, WPARAM wParam, LPARAM lParam) {
 	switch (iMessage) {
 	case WM_CREATE:
+		///ÄÁÆ®·Ñ
 		//·Î±×ÀÎ ¾ÆÀÌµð ½ºÅÂÆ½
 		hStatic_Login_Id = CreateWindow(TEXT("static"), TEXT("ID"), WS_CHILD | WS_VISIBLE | WS_BORDER | ES_AUTOHSCROLL,
 			10, 0, 40, 20, hWnd, (HMENU)ID_S_LOGIN_ID, g_hInst, NULL);
@@ -710,23 +764,25 @@ LRESULT CALLBACK LoginProc(HWND hWnd, UINT iMessage, WPARAM wParam, LPARAM lPara
 		//·Î±×ÀÎ ¹öÆ°
 		hButton_Login = CreateWindow(TEXT("button"), TEXT("LOGIN"), WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON,
 			910, 10, 200, 50, hWnd, (HMENU)ID_B_LOGIN, g_hInst, NULL);
+		///
 		return 0;
 	case WM_COMMAND:
 		switch (LOWORD(wParam))
 		{
-		case ID_B_LOGIN:									//·Î±×ÀÎ ¹öÆ° ´­·ÈÀ»¶§
+			//·Î±×ÀÎ ¹öÆ° ´­·ÈÀ»¶§
+		case ID_B_LOGIN:									
 			//Ä¿¸Çµå¿Í Á¤º¸ ¹®ÀÚ¿­ ºóÄ­À¸·Î ÃÊ±âÈ­
-			lstrcpy(tgcmdserver, "");				//Ä¿¸Çµå
-			lstrcpy(tgId, "");							//¾ÆÀÌµð
-			lstrcpy(tgPw, "");							//ºñ¹ø
+			lstrcpy(tgcmdserver, "");																																//Ä¿¸Çµå
+			lstrcpy(tgId, "");																																			//¾ÆÀÌµð
+			lstrcpy(tgPw, "");																																			//ºñ¹ø
 			//·Î±×ÀÎ Á¤º¸ ¿¡µðÆ®¿¡¼­ Á¤º¸ ¹®ÀÚ¿­ ´ã±â
-			GetWindowText(hEdit_Login_Id, tgId, sizeof(tgId));		//·Î±×ÀÎ ¾ÆÀÌµð
-			GetWindowText(hEdit_Login_Pw, tgPw, sizeof(tgPw));	//·Î±×ÀÎ ºñ¹ø
+			GetWindowText(hEdit_Login_Id, tgId, sizeof(tgId));		
+			GetWindowText(hEdit_Login_Pw, tgPw, sizeof(tgPw));	
 			lstrcpy(tgcmdserver, "4ID:");
 			lstrcat(tgcmdserver, tgId);
 			lstrcat(tgcmdserver, "PW:");
 			lstrcat(tgcmdserver, tgPw);
-			nReturn = send(clientsock, tgcmdserver, sizeof(tgcmdserver), 0);							//¼­¹ö¿¡ ·Î±×ÀÎ Ä¿¸Çµå º¸³»±â
+			nReturn = send(clientsock, tgcmdserver, sizeof(tgcmdserver), 0);																	//¼­¹ö¿¡ ·Î±×ÀÎ Ä¿¸Çµå º¸³»±â
 			break;
 		}
 		return 0;
@@ -735,10 +791,11 @@ LRESULT CALLBACK LoginProc(HWND hWnd, UINT iMessage, WPARAM wParam, LPARAM lPara
 	}
 	return(DefWindowProc(hWnd, iMessage, wParam, lParam));
 }
-LRESULT CALLBACK SelSeatProc(HWND hWnd, UINT iMessage, WPARAM wParam, LPARAM lParam) {						//ÀÚ¸®¼±ÅÃ
+//LRESULT CALLBACK SelSeatProc(HWND, UINT, WPARAM, LPARAM):ÀÚ¸®¼±ÅÃÈ­¸é(ÀÚ¸®¼±ÅÃ ¼öÇà)
+LRESULT CALLBACK SelSeatProc(HWND hWnd, UINT iMessage, WPARAM wParam, LPARAM lParam) {						
 	switch (iMessage) {
 	case WM_CREATE:
-		nReturn = send(clientsock, "S-", sizeof("S-"), 0);			///////////////////////////////////// ¹ÚÁ¤Çö Å×½ºÆ®//////////////////////////////////////
+		///ÄÁÆ®·Ñ
 		//ÀÚ¸®¹øÈ£ ½ºÅÂÆ½
 		hStatic_Sn = CreateWindow(TEXT("static"), TEXT("SN(2ÀÚ¸®)"), WS_CHILD | WS_VISIBLE | WS_BORDER | ES_AUTOHSCROLL,
 			10, 0, 80, 20, hWnd, (HMENU)ID_S_SN, g_hInst, NULL);
@@ -748,15 +805,17 @@ LRESULT CALLBACK SelSeatProc(HWND hWnd, UINT iMessage, WPARAM wParam, LPARAM lPa
 		//ÀÚ¸®¼±ÅÃ ¹öÆ°
 		hButton_SelSeat = CreateWindow(TEXT("button"), TEXT("SELECTSEAT"), WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON,
 			910, 10, 200, 50, hWnd, (HMENU)ID_B_SELSEAT, g_hInst, NULL);
+		///
 		return 0;
 	case WM_COMMAND:
 		switch (LOWORD(wParam))
 		{
-		case ID_B_SELSEAT:					//ÀÚ¸®¼±ÅÃ ´­·ÈÀ»¶§
+			//ÀÚ¸®¼±ÅÃ ´­·ÈÀ»¶§
+		case ID_B_SELSEAT:					
 			lstrcpy(tgcmdserver, "1");
-			GetWindowText(hEdit_Sn,tgnum, sizeof(tgnum));						//ÀÚ¸® ¼±ÅÃ(02µî 2ÀÚ¸® Çü½ÄÀ¸·Î)
+			GetWindowText(hEdit_Sn,tgnum, sizeof(tgnum));																				//ÀÚ¸® ¼±ÅÃ(02µî ¼ýÀÚ 2ÀÚ¸® Çü½ÄÀ¸·Î)
 			lstrcat(tgcmdserver, tgnum);
-			nReturn = send(clientsock, tgcmdserver, sizeof(tgcmdserver), 0);				//¼­¹ö·Î ÀÚ¸®¼±ÅÃ Ä¿¸Çµå º¸³»±â
+			nReturn = send(clientsock, tgcmdserver, sizeof(tgcmdserver), 0);														//¼­¹ö·Î ÀÚ¸®¼±ÅÃ Ä¿¸Çµå º¸³»±â
 			break;
 		}
 		return 0;
@@ -765,9 +824,11 @@ LRESULT CALLBACK SelSeatProc(HWND hWnd, UINT iMessage, WPARAM wParam, LPARAM lPa
 	}
 	return(DefWindowProc(hWnd, iMessage, wParam, lParam));
 }
-LRESULT CALLBACK OrderProc(HWND hWnd, UINT iMessage, WPARAM wParam, LPARAM lParam) {															//ÁÖ¹®
+//LRESULT CALLBACK OrderProc(HWND, UINT, WPARAM, LPARAM):ÁÖ¹®È­¸é(ÁÖ¹® ¼öÇà)
+LRESULT CALLBACK OrderProc(HWND hWnd, UINT iMessage, WPARAM wParam, LPARAM lParam) {															
 	switch (iMessage) {
 	case WM_CREATE:
+		///ÄÁÆ®·Ñ
 		//¾ÆÀÌÅÛ ½ºÅÂÆ½
 		hStatic_Item = CreateWindow(TEXT("static"), TEXT("ITEM"), WS_CHILD | WS_VISIBLE | WS_BORDER | ES_AUTOHSCROLL,
 			10, 0, 40, 20, hWnd, (HMENU)ID_S_ITEM, g_hInst, NULL);
@@ -783,6 +844,7 @@ LRESULT CALLBACK OrderProc(HWND hWnd, UINT iMessage, WPARAM wParam, LPARAM lPara
 		//ÁÖ¹® ¹öÆ°
 		hButton_Order = CreateWindow(TEXT("button"), TEXT("ORDER"), WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON,
 			910, 10, 200, 50, hWnd, (HMENU)ID_B_ORDER, g_hInst, NULL);
+		///
 		//¾ÆÀÌÅÛ¸®½ºÆ® ÃÊ±âÈ­
 		SendMessage(hListBox_ItemList, LB_ADDSTRING, 0, (LPARAM)"DRINK");
 		SendMessage(hListBox_ItemList, LB_ADDSTRING, 0, (LPARAM)"FOOD");
@@ -790,22 +852,24 @@ LRESULT CALLBACK OrderProc(HWND hWnd, UINT iMessage, WPARAM wParam, LPARAM lPara
 		return 0;
 	case WM_COMMAND:
 		switch (LOWORD(wParam)) {
-		case ID_L_ITEM:							//¾ÆÀÌÅÛ¸®½ºÆ® ³ëÆ¼ÇÇ
+			//¾ÆÀÌÅÛ¸®½ºÆ® ³ëÆ¼ÇÇ
+		case ID_L_ITEM:							
 			switch (HIWORD(wParam)) {
 			case LBN_SELCHANGE:
-				selitemi = SendMessage(hListBox_ItemList, LB_GETCURSEL, 0, 0);				//ÁÖ¹® »óÇ° ¼±ÅÃ(¸®½ºÆ®¹Ú½ºÀÇ ÀÎµ¦½º·Î 1ÀÚ¸® Çü½ÄÀ¸·Î)
+				selitemi = SendMessage(hListBox_ItemList, LB_GETCURSEL, 0, 0);													//ÁÖ¹® »óÇ° ¼±ÅÃ(¸®½ºÆ®¹Ú½ºÀÇ ÀÎµ¦½º·Î 1ÀÚ¸® Çü½ÄÀ¸·Î)
 				selitemi += 1;
-				wsprintf(tgselitemi, "%d", selitemi);																			//¾ÆÀÌÅÛ ÀÎµ¦½º ´ã±â
+				wsprintf(tgselitemi, "%d", selitemi);																									//¾ÆÀÌÅÛ ÀÎµ¦½º ´ã±â
 			}
 			break;
-		case ID_B_ORDER:																			//ÁÖ¹® ´­·ÈÀ»¶§
+			//ÁÖ¹® ´­·ÈÀ»¶§
+		case ID_B_ORDER:																			
 			lstrcpy(tgcmdserver, "2");
 			lstrcat(tgcmdserver, tgselitemi);
-			GetWindowText(hEdit_OrderCount, tgitemcount, sizeof(tgitemcount));					//¾ÆÀÌÅÛÁÖ¹®°¹¼ö ¹®ÀÚ¿­¿¡ ´ã±â
+			GetWindowText(hEdit_OrderCount, tgitemcount, sizeof(tgitemcount));													//¾ÆÀÌÅÛÁÖ¹®°¹¼ö ¹®ÀÚ¿­¿¡ ´ã±â
 			lstrcat(tgcmdserver, tgitemcount);
 			lstrcat(tgcmdserver, "SN:");
-			lstrcat(tgcmdserver, tgSeatnum);
-			nReturn = send(clientsock, tgcmdserver, sizeof(tgcmdserver), 0);							//¼­¹ö·Î ÁÖ¹® Ä¿¸Çµå º¸³»±â
+			lstrcat(tgcmdserver, usersn);
+			nReturn = send(clientsock, tgcmdserver, sizeof(tgcmdserver), 0);															//¼­¹ö·Î ÁÖ¹® Ä¿¸Çµå º¸³»±â
 			break;
 		}
 		return 0;
