@@ -194,7 +194,7 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR IpszCmd
 }
 
 /*--------------------------------------------------------
- Init_Wnd: 윈도우 초기설정
+ Init_Wnd(WNDCLASS*, int): 윈도우 초기설정
 --------------------------------------------------------*/
 void Init_Wnd(WNDCLASS* Wnd, int Proc_No) {
 	if (Proc_No > 4) {
@@ -269,14 +269,10 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT iMessage, WPARAM wParam, LPARAM lParam)
 		// 근무기록 윈도우 설정
 		Init_Wnd(&Wnd_W, 4);
 
-
-		
 		for (int i = 0; i < 30; i ++) {
 			hSeat[i] = create_S();				// 좌석 초기화 30좌석
 		}
-		for (int i = 0; i < 30; i += 2) {
-			hSeat[i]->state = true;
-		}
+
 		//DBExcuteSQL();		나중에 수정 개선할 함수입니다.
 
 		return 0;
@@ -990,11 +986,12 @@ DWORD WINAPI Recv_Thread(LPVOID Param) {
 		}
 		else {
 			lstrcpy(strText, buf);
-			strText[2] = '\0';
+			strText[1] = '\0';
 
-			if (lstrcmp(strText, "S-") == 0) {
+			if (lstrcmp(strText, "1") == 0) {
 				hSocket = (SOCKET)(*P);
-				lstrcpy(STR, "");
+				lstrcpy(STR, "11");
+				/*
 				if (hSeat[0]->state == false) {
 					wsprintf(text, "%d", 0);
 					lstrcat(STR, text);
@@ -1005,6 +1002,7 @@ DWORD WINAPI Recv_Thread(LPVOID Param) {
 						lstrcat(STR, text);
 					}
 				}
+				*/
 				nReturn = send(hSocket, STR, sizeof(STR), 0);
 			}
 		}

@@ -1,7 +1,7 @@
 
 #include <Windows.h>
-#include<stdio.h>
-#include<CommCtrl.h>
+#include <stdio.h>
+#include <CommCtrl.h>
 #include <sql.h>
 #include <sqlext.h>
 #include "resource.h"
@@ -134,14 +134,18 @@ DWORD WINAPI ThreadFunc(LPVOID Param) {//팀플//리시브스레드로써 요청의 결과를 다
 					lstrcpy(usersn, tgSeatnum);										//유저의 자리번호 담기
 					wsprintf(buf, "%s", "자리사용가능");
 				}
-				else wsprintf(buf, "%s", "자리사용불가");						//서버로부터 "10" 받았을때
+				else {
+					wsprintf(buf, "%s", "자리사용불가");						//서버로부터 "10" 받았을때
+				}
 			}
 			else if (buf[0] == '3') {
 				 if (lstrcmp(buf, TEXT("31")) == 0) {								//회원가입
 					chkjoin = 1;
 					wsprintf(buf, "%s", "회원가입성공");
-				}
-				 else wsprintf(buf, "%s", "회원가입실패");						//서버로부터 "30" 받았을때
+				 }
+				 else {
+					 wsprintf(buf, "%s", "회원가입실패");						//서버로부터 "30" 받았을때
+				 }
 			}
 			else if (buf[0] == '4') {
 				if (buf[1]=='1') {					//로그인되면 남은시간처리되고 아이디저장			//로그인실패 이유: 1.아이디/비번오류,2.남은 시간 0이하
@@ -258,10 +262,12 @@ DWORD WINAPI ThreadFunc(LPVOID Param) {//팀플//리시브스레드로써 요청의 결과를 다
 				}
 				else wsprintf(buf, "%s", "탈퇴실패");						//서버로부터  "70" 받았을 때
 			}
+			/*
 			else {
 				MessageBox(hWndMain, buf,"server수신", MB_OK);					/////////////////////////////////////////////////////////////////// 박정현 테스트 문단////////////////////////
 				// 이쪽에 서버에서 보내준 데이터를 기반으로 앉을수 있는 좌석을 선별하고 선택할수있게 요청		
-}
+			}
+			*/
 			if (lstrlen(buf) != 0) {//팀플//모든 메세지 나타내기
 				sprintf_s(strTemp, "수신한 메시지:%s", buf);								//팀플//위에서 cmd를 변환한 메세지를 프로시저의 채팅 에디트에 띄우기
 				int len = GetWindowTextLength(hEdit_Chat);
