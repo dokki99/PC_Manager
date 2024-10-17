@@ -321,7 +321,12 @@ DWORD WINAPI ThreadFunc(LPVOID Param) {
 			}
 			//서버로부터 받은 메세지를 채팅 에디트에 "수신한 메세지:+변환한 메세지"로 띄우기
 			if (lstrlen(buf) != 0) {
-				MessageBox(hWndMain, buf, "!!", MB_OK);
+				//MessageBox(hWndMain, buf, "@@@", MB_OK);
+				sprintf_s(strTemp, "수신한 메시지:%s", buf);
+				int len = GetWindowTextLength(hEdit_Chat);
+				SendMessage(hEdit_Chat, EM_SETSEL, (WPARAM)len, (LPARAM)len);
+				SendMessage(hEdit_Chat, EM_REPLACESEL, FALSE, (LPARAM)"\r\n");
+				SendMessage(hEdit_Chat, EM_REPLACESEL, FALSE, (LPARAM)strTemp);
 			}
 		}
 	}
@@ -427,6 +432,9 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT iMessage, WPARAM wParam, LPARAM lParam)
 		Init_Wnd(&Wnd_O, 2);
 		///
 		///컨트롤
+		hEdit_Chat = CreateWindow(TEXT("edit"), NULL, WS_CHILD | WS_VISIBLE | WS_BORDER | ES_AUTOHSCROLL| ES_MULTILINE,			
+		10, 100, 500, 400, hWnd, (HMENU)ID_E_CHAT, g_hInst, NULL);
+
 		//자리번호 스태틱
 		hStatic_Sn = CreateWindow(TEXT("static"), TEXT("SN(2자리)"), WS_CHILD | WS_VISIBLE | WS_BORDER | ES_AUTOHSCROLL,
 			10, 0, 80, 20, hWnd, (HMENU)ID_S_SN, g_hInst, NULL);
