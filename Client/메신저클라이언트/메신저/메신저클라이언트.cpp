@@ -1,22 +1,13 @@
+//하나의 창에 컨트롤을 하이드 시켜서 사용
 //상품구매할때 아이디 보내기
-//ShowWindow(hWnd, nCmdShow);
 #include <Windows.h>
 #include <stdio.h>
 #include <CommCtrl.h>
 #include <sql.h>
 #include <sqlext.h>
 #include "resource.h"
-#define ID_B_GO_JOIN_OR_UPDATE 140
-#define ID_B_GO_ORDER 141
-HWND hButton_Go_Join_Or_Update;
-HWND hButton_Go_Order;
 //화면 핸들
 HWND hWndMain;		// 메인
-HWND hWnd_C;			// 연결
-HWND hWnd_JU;		// 가입/수정
-HWND hWnd_L;			// 로그인
-HWND hWnd_S;			// 자리선택
-HWND hWnd_O;			// 주문 
 //화면 제목
 LPCTSTR C_Class = TEXT("연결");					//연결
 LPCTSTR JU_Class = TEXT("회원가입/수정");//가입/수정
@@ -24,15 +15,13 @@ LPCTSTR L_Class = TEXT("로그인");				//로그인
 LPCTSTR S_Class = TEXT("자리선택");			//자리선택
 LPCTSTR O_Class = TEXT("주문");					//주문
 ////컨트롤 핸들
-//프로시저
-HWND hEdit_Chat;									//채팅 에디트
+//사용화면
 HWND hButton_Logout;							//로그아웃 버튼
 HWND hButton_Delete;							//탈퇴 버튼
 HWND hEdit_Timer;								//탈퇴 에디트
-//연결
-HWND hEdit_Ip;										//IP 에디트
-HWND hEdit_Port;									//PORT 에디트
-HWND hButton_Connect;						//연결 버튼
+
+HWND hButton_Go_Order;						//주문가기 버튼
+
 //가입/수정
 HWND hEdit_Id;										//아이디 에디트
 HWND hEdit_Pw;										//비번 에디트
@@ -46,6 +35,8 @@ HWND hButton_Update;							//수정 버튼
 HWND hEdit_Login_Id;							//아이디 에디트
 HWND hEdit_Login_Pw;							//비번 에디트
 HWND hButton_Login;								//로그인 버튼
+
+HWND hButton_Go_Join_Or_Update;	//가입 및 수정가기 버튼
 //자리선택
 HWND hEdit_Sn;										//자리번호 에디트
 HWND hButton_SelSeat;						//자리번호선택 버튼
@@ -54,9 +45,6 @@ HWND hListBox_ItemList;						//아이템리스트 리스트박스
 HWND hEdit_OrderCount;						//아이템주문갯수 에디트
 HWND hButton_Order;							//주문 버튼
 ///스태틱
-//연결
-HWND hStatic_Ip;									//IP
-HWND hStatic_Port;								//PORT
 //가입/수정
 HWND hStatic_Id;									//아이디
 HWND hStatic_Pw;									//비번
@@ -72,16 +60,10 @@ HWND hStatic_Sn;									//자리번호
 //주문
 HWND hStatic_Item;								//아이템
 HWND hStatic_OrderCount;					//아이템주문갯수
-//프로시저
-HWND hStatic_Chat;								//채팅
+//사용화면
 HWND hStatic_Timer;							//타이머
 //프로시저함수들
 LRESULT CALLBACK WndProc(HWND, UINT, WPARAM, LPARAM);															//기본
-LRESULT CALLBACK ConnectProc(HWND, UINT, WPARAM, LPARAM);														//연결
-LRESULT CALLBACK Join_Or_UpdateProc(HWND, UINT, WPARAM, LPARAM);										//가입/수정
-LRESULT CALLBACK LoginProc(HWND, UINT, WPARAM, LPARAM);															//로그인
-LRESULT CALLBACK SelSeatProc(HWND, UINT, WPARAM, LPARAM);														//자리선택
-LRESULT CALLBACK OrderProc(HWND, UINT, WPARAM, LPARAM);														//주문
 
 HINSTANCE g_hInst;
 LPCTSTR lpszClass = TEXT("PC방 클라이언트");																										//윈도우 프로시저 타이틀
@@ -129,11 +111,15 @@ TCHAR tgitemcount[10] = "";																																	//개수 문자열
 //
 ///
 //상태 체크 변수
-int chkseat = 0;																																							//자리선택
-int chkjoin = 0;																																							//가입
-int chklogin = 0;																																						//로그인
-int chktimer;																																							//타이머 제어(1이면 실행/0이면 종료)	
-int chkendbtn = 0;																																					//로그아웃/탈퇴 
+BOOL chkseat = 0;																																							//자리선택
+BOOL chkjoin = 0;																																							//가입
+BOOL chklogin = 0;																																						//로그인
+BOOL chktimer;																																							//타이머 제어(1이면 실행/0이면 종료)	
+BOOL chkendbtn = 0;																																					//로그아웃/탈퇴 
+
+BOOL chkorder = 0;																																						//주문
+BOOL chkupdate = 0;																																					//수정
+BOOL chkpctime = 0;																																					//남은시간0인지
 //
 int i;
 //자리번호 선택 변수들
@@ -148,6 +134,19 @@ int orderi = 0;																																							//주문요소정보 인덱스
 TCHAR pctimebuf[10];																																				//커맨드에서 담아오기
 TCHAR tpctime[10];																																					//출력하기 위한 문자열
 //
+
+//좌석반환변수
+int returnsntime = 100000000;																																//자리반납타이머시간
+BOOL returnsn = 0;																																						//자리반납수행
+
+//자리선택으로 보내는 변수
+BOOL gohome = 0;
+
+//남은시간에따라  1:로그인화면/0:사용화면으로 보내기
+int selafterorder = 0;
+
+//화면모드(0:자리선택/1:로그인/2:가입 및 수정/3:주문/4:사용) 설정변수
+int selwindow = 0;
 
 //DWORD WINAPI ThreadFunc(LPVOID){}:리시브스레드로써 요청의 결과를 다룸
 //머릿말인 숫자 다음 숫자가  1이 오면 가능/ 0이 오면 불가
@@ -172,17 +171,15 @@ DWORD WINAPI ThreadFunc(LPVOID Param) {
 			//자리선택 결과(가능:11/불가:10)
 			if (buf[0] == '1') {
 				if (lstrcmp(buf, TEXT("11")) == 0) {
+					returnsntime = 100000000;																													//자리반납타이머시간 초기화
+					returnsn = 1;																																			//자리반납동작
 					chkseat = 1;																																			//자리선택 체크
+					SetTimer(hWndMain, 0, 100, NULL);																									//자동으로 화면모드 설정 타이머
+					SetTimer(hWndMain, 3, 1000000, NULL);																							//자리반납타이머
+					//SendMessage(hWndMain, WM_TIMER, 0, 0);
+					//SendMessage(hWndMain, WM_TIMER, 3, 0);
 					lstrcpy(usersn, tgnum);																															//자리번호 담기									
 					wsprintf(buf, "%s", "자리사용가능");
-					if (chkseat == 1 && chklogin == 0) {
-						hWnd_L = CreateWindow(L_Class, L_Class, WS_VISIBLE | WS_OVERLAPPEDWINDOW, CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT, NULL, (HMENU)NULL, g_hInst, NULL);
-						ShowWindow(hWnd_L, SW_SHOW);
-					}
-					else {
-						if (chkseat == 0)MessageBox(hWndMain, "자리 선택 먼저 하세요!!", "오류", MB_OK);
-						if (chklogin == 1)MessageBox(hWndMain, "로그인 되어 있습니다!!", "오류", MB_OK);
-					}
 				}
 				else wsprintf(buf, "%s", "자리사용불가");
 			}
@@ -263,9 +260,8 @@ DWORD WINAPI ThreadFunc(LPVOID Param) {
 							wsprintf(buf, "%s", "로그인성공");
 						}
 						else {
-							hWnd_O = CreateWindow(O_Class, O_Class, WS_VISIBLE | WS_OVERLAPPEDWINDOW, CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT, NULL, (HMENU)NULL, g_hInst, NULL);
-							ShowWindow(hWnd_O, SW_SHOW);
 							wsprintf(buf, "%s", "로그인실패(잔여시간없음)");
+							chkpctime = 1;
 						}
 					}
 				}
@@ -276,6 +272,7 @@ DWORD WINAPI ThreadFunc(LPVOID Param) {
 				//음료
 				if (buf[1] == '1') {
 					if (lstrcmp(orderbuf, TEXT("211")) == 0) {
+						chkorder = 1;
 						wsprintf(buf, "%s", "DRINK구입성공");
 					}
 					else wsprintf(buf, "%s", "DRINK구입실패");
@@ -283,6 +280,7 @@ DWORD WINAPI ThreadFunc(LPVOID Param) {
 				//식품
 				else if (buf[1] == '2') {
 					if (lstrcmp(orderbuf, TEXT("221")) == 0) {
+						chkorder = 1;
 						wsprintf(buf, "%s", "FOOD구입성공");
 					}
 					else wsprintf(buf, "%s", "FOOD구입실패");
@@ -290,6 +288,7 @@ DWORD WINAPI ThreadFunc(LPVOID Param) {
 				//PC
 				else if (buf[1] == '3') {
 					if (lstrcmp(orderbuf, TEXT("231")) == 0) {
+						chkorder = 1;
 						wsprintf(buf, "%s", "PC구입성공");
 					}
 					else wsprintf(buf, "%s", "PC구입실패");
@@ -300,7 +299,6 @@ DWORD WINAPI ThreadFunc(LPVOID Param) {
 				if (lstrcmp(buf, TEXT("51")) == 0) {
 					lstrcpy(userid, "");
 					wsprintf(buf, "%s", "로그아웃성공");
-					chklogin = 0;
 				}
 				else 	wsprintf(buf, "%s", "로그아웃실패");
 			}
@@ -308,25 +306,29 @@ DWORD WINAPI ThreadFunc(LPVOID Param) {
 			else if (buf[0] == '6') {
 				if (lstrcmp(buf, TEXT("61")) == 0) {
 					wsprintf(buf, "%s", "수정성공");
+					chkupdate = 1;
 				}
 				else wsprintf(buf, "%s", "수정실패");
 			}
 			//탈퇴 결과(가능:71/불가:70)
 			else if (buf[0] == '7') {
 				if (lstrcmp(buf, TEXT("71")) == 0) {
-					chklogin = 0;
 					wsprintf(buf, "%s", "탈퇴성공");
+					gohome = 1;																																		//자리 선택가기
 				}
 				else wsprintf(buf, "%s", "탈퇴실패");
 			}
-			//서버로부터 받은 메세지를 채팅 에디트에 "수신한 메세지:+변환한 메세지"로 띄우기
+			//반납 결과(가능:81/불가:80)
+			else if (buf[0] == '8') {
+				if (lstrcmp(buf, TEXT("81")) == 0) {
+					wsprintf(buf, "%s", "반환성공");
+					gohome = 1;																																		//자리 선택가기
+				}
+				else wsprintf(buf, "%s", "반환실패");
+			}
+			//서버로부터 받은 메세지를 메세지박스로 띄우기
 			if (lstrlen(buf) != 0) {
-				//MessageBox(hWndMain, buf, "@@@", MB_OK);
-				sprintf_s(strTemp, "수신한 메시지:%s", buf);
-				int len = GetWindowTextLength(hEdit_Chat);
-				SendMessage(hEdit_Chat, EM_SETSEL, (WPARAM)len, (LPARAM)len);
-				SendMessage(hEdit_Chat, EM_REPLACESEL, FALSE, (LPARAM)"\r\n");
-				SendMessage(hEdit_Chat, EM_REPLACESEL, FALSE, (LPARAM)strTemp);
+				MessageBox(hWndMain, buf, "수신한 메시지", MB_OK);
 			}
 		}
 	}
@@ -347,7 +349,7 @@ int APIENTRY WinMain(HINSTANCE hinstance, HINSTANCE hPrevinstance, LPSTR lpszCmd
 	WndClass.hInstance = hinstance;
 	WndClass.lpfnWndProc = WndProc;
 	WndClass.lpszClassName = lpszClass;
-	WndClass.lpszMenuName = NULL;																			//메뉴달기
+	WndClass.lpszMenuName = NULL;																			
 	WndClass.style = CS_HREDRAW | CS_VREDRAW;
 	RegisterClass(&WndClass);
 
@@ -359,39 +361,6 @@ int APIENTRY WinMain(HINSTANCE hinstance, HINSTANCE hPrevinstance, LPSTR lpszCmd
 		DispatchMessage(&Message);
 	}
 	return (int)Message.wParam;
-}
-//void Init_Wnd(WNDCLASS*, int):윈도우프로시저에서 띄울 다른 프로시저 설정
-void Init_Wnd(WNDCLASS* Wnd, int Proc_No) {
-	if (Proc_No > 2) {
-		MessageBox(hWndMain, "윈도우 초기화 오류!", "알림", MB_OK);
-		return;
-	}
-
-	Wnd->cbClsExtra = 0;
-	Wnd->cbWndExtra = 0;
-	Wnd->hbrBackground = (HBRUSH)RGB(0, 0, 0);
-	Wnd->hCursor = LoadCursor(NULL, IDC_ARROW);
-	Wnd->hIcon = LoadIcon(NULL, IDI_ASTERISK);
-	Wnd->hInstance = g_hInst;
-	switch (Proc_No)
-	{
-	case 0:																																												//로그인화면
-		Wnd->lpfnWndProc = LoginProc;
-		Wnd->lpszClassName = L_Class;
-		break;
-	case 1:																																												//가입/수정화면
-		Wnd->lpfnWndProc = Join_Or_UpdateProc;
-		Wnd->lpszClassName = JU_Class;
-		break;
-	case 2:																																												//주문화면
-		Wnd->lpfnWndProc = OrderProc;
-		Wnd->lpszClassName = O_Class;
-		break;
-	}
-	Wnd->lpszMenuName = NULL;																																			//띄울 다른 프로시저에 메뉴는 없음
-	Wnd->style = CS_HREDRAW | CS_VREDRAW;
-
-	RegisterClass(Wnd);
 }
 //void CLIENT_Open():소켓 연결 함수(연결스레드 만들기)
 void CLIENT_Open() {
@@ -418,65 +387,358 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT iMessage, WPARAM wParam, LPARAM lParam)
 
 		CLIENT_Open();
 
-		//띄울 다른 화면들
-		WNDCLASS Wnd_JU;																															//가입/수정
-		WNDCLASS Wnd_L;																															//로그인
-		WNDCLASS Wnd_O;																															//주문
-
-		///윈도우 설정
-		// 로그인
-		Init_Wnd(&Wnd_L, 0);
-		// 가입/수정
-		Init_Wnd(&Wnd_JU, 1);
-		// 주문
-		Init_Wnd(&Wnd_O, 2);
 		///
-		///컨트롤
-		hEdit_Chat = CreateWindow(TEXT("edit"), NULL, WS_CHILD | WS_VISIBLE | WS_BORDER | ES_AUTOHSCROLL| ES_MULTILINE,			
-		10, 100, 500, 400, hWnd, (HMENU)ID_E_CHAT, g_hInst, NULL);
-
+		///자리선택 컨트롤(홈화면)
+		
 		//자리번호 스태틱
 		hStatic_Sn = CreateWindow(TEXT("static"), TEXT("SN(2자리)"), WS_CHILD | WS_VISIBLE | WS_BORDER | ES_AUTOHSCROLL,
 			10, 0, 80, 20, hWnd, (HMENU)ID_S_SN, g_hInst, NULL);
-		if (chklogin == 1)ShowWindow(hStatic_Sn, SW_HIDE);
+		if (selwindow!=0 )ShowWindow(hStatic_Sn, SW_HIDE);
 		//자리번호 에디트
 		hEdit_Sn = CreateWindow(TEXT("edit"), NULL, WS_CHILD | WS_VISIBLE | WS_BORDER | ES_AUTOHSCROLL,
 			10, 50, 100, 50, hWnd, (HMENU)ID_E_SN, g_hInst, NULL);
-		if (chklogin == 1)ShowWindow(hEdit_Sn, SW_HIDE);
+		if (selwindow!=0)ShowWindow(hEdit_Sn, SW_HIDE);
 		//자리선택 버튼
 		hButton_SelSeat = CreateWindow(TEXT("button"), TEXT("SELECTSEAT"), WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON,
 			910, 10, 200, 50, hWnd, (HMENU)ID_B_SELSEAT, g_hInst, NULL);
-		if (chklogin == 1)ShowWindow(hButton_SelSeat, SW_HIDE);
-		//주문가기 버튼
-		hButton_Go_Order = CreateWindow(TEXT("button"), TEXT("ORDER"), WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON,
-			910, 200, 200, 50, hWnd, (HMENU)ID_B_GO_ORDER, g_hInst, NULL);
-		if (chklogin == 0)ShowWindow(hButton_Go_Order, SW_HIDE);
-		///
+		if (selwindow!=0)ShowWindow(hButton_SelSeat, SW_HIDE);
 
-		///컨트롤
-		//로그아웃 버튼
-		hButton_Logout = CreateWindow(TEXT("button"), TEXT("LOGOUT"), WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON,
-			610, 50, 200, 65, hWnd, (HMENU)ID_B_LOGOUT, g_hInst, NULL);
-		if (chklogin == 0)ShowWindow(hButton_Logout, SW_HIDE);
-		//탈퇴 버튼
-		hButton_Delete = CreateWindow(TEXT("button"), TEXT("DELETE"), WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON,
-			910, 50, 200, 65, hWnd, (HMENU)ID_B_DELETE, g_hInst, NULL);
-		if (chklogin == 0)ShowWindow(hButton_Delete, SW_HIDE);
-		//타이머 에디트
-		hEdit_Timer = CreateWindow(TEXT("edit"), NULL, WS_CHILD | WS_VISIBLE | WS_BORDER | ES_AUTOHSCROLL,
-			610, 200, 100, 100, hWnd, (HMENU)ID_E_TIMER, g_hInst, NULL);
-		if (chklogin == 0)ShowWindow(hEdit_Timer, SW_HIDE);
-		//타이머 스태틱
-		hStatic_Timer = CreateWindow(TEXT("static"), TEXT("TIME"), WS_CHILD | WS_VISIBLE | WS_BORDER | ES_AUTOHSCROLL,
-			610, 150, 40, 20, hWnd, (HMENU)ID_S_TIMER, g_hInst, NULL);
-		if (chklogin == 0)ShowWindow(hStatic_Timer, SW_HIDE);
-		///
+		
+	
 		//타이머(로그인 시 수행)
 		SetTimer(hWnd, 1, 1000, NULL);			//시간 타이머
 		SetTimer(hWnd, 2, 1000, NULL);			//시간 타이머 종료하는 타이머
 		return 0;
 	case WM_TIMER:
 		switch (wParam) {
+		case 0:													//자동으로 화면모드 바꾸는 타이머
+			//자리선택화면->로그인화면
+			if (chkseat == 1) {								//자리선택 잘 되었을때
+				chkseat = 0;
+				selwindow = 1;								//로그인화면으로 설정
+				//자리선택화면 끄기
+				if (selwindow != 0)ShowWindow(hStatic_Sn, SW_HIDE);
+				if (selwindow != 0)ShowWindow(hEdit_Sn, SW_HIDE);
+				if (selwindow != 0)ShowWindow(hButton_SelSeat, SW_HIDE);
+				InvalidateRect(hWnd, NULL, TRUE);
+				//로그인화면 켜기
+				/////로그인화면 컨트롤
+		//로그인 아이디 스태틱
+				hStatic_Login_Id = CreateWindow(TEXT("static"), TEXT("ID"), WS_CHILD | WS_VISIBLE | WS_BORDER | ES_AUTOHSCROLL,
+					10, 0, 80, 20, hWnd, (HMENU)ID_S_LOGIN_ID, g_hInst, NULL);
+				if (selwindow != 1)ShowWindow(hStatic_Login_Id, SW_HIDE);
+				//로그인 아이디 에디트
+				hEdit_Login_Id = CreateWindow(TEXT("edit"), NULL, WS_CHILD | WS_VISIBLE | WS_BORDER | ES_AUTOHSCROLL,
+					10, 50, 100, 50, hWnd, (HMENU)ID_E_LOGIN_ID, g_hInst, NULL);
+				if (selwindow != 1)ShowWindow(hEdit_Login_Id, SW_HIDE);
+				//로그인 비번 스태틱
+				hStatic_Login_Pw = CreateWindow(TEXT("static"), TEXT("PW"), WS_CHILD | WS_VISIBLE | WS_BORDER | ES_AUTOHSCROLL,
+					10, 150, 40, 20, hWnd, (HMENU)ID_S_LOGIN_PW, g_hInst, NULL);
+				if (selwindow != 1)ShowWindow(hStatic_Login_Pw, SW_HIDE);
+				//로그인 비번 에디트
+				hEdit_Login_Pw = CreateWindow(TEXT("edit"), NULL, WS_CHILD | WS_VISIBLE | WS_BORDER | ES_AUTOHSCROLL,
+					10, 200, 100, 50, hWnd, (HMENU)ID_E_LOGIN_PW, g_hInst, NULL);
+				if (selwindow != 1)ShowWindow(hEdit_Login_Pw, SW_HIDE);
+				//로그인 버튼
+				hButton_Login = CreateWindow(TEXT("button"), TEXT("LOGIN"), WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON,
+					910, 10, 200, 50, hWnd, (HMENU)ID_B_LOGIN, g_hInst, NULL);
+				if (selwindow != 1)ShowWindow(hButton_Login, SW_HIDE);
+
+				//가입/수정 가기 버튼
+				hButton_Go_Join_Or_Update = CreateWindow(TEXT("button"), TEXT("JOIN/UPDATE"), WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON,
+					910, 100, 200, 50, hWnd, (HMENU)ID_B_GO_JOIN_OR_UPDATE, g_hInst, NULL);;
+				if (selwindow != 1)ShowWindow(hButton_Go_Join_Or_Update, SW_HIDE);
+				///
+			}
+			//로그인화면->사용화면
+			else if (chklogin == 1) {					//로그인 잘 되었을 때
+				chklogin = 0;
+				selwindow = 4;							//사용화면
+				InvalidateRect(hWnd, NULL, TRUE);
+				//로그인화면 끄기
+				if (selwindow != 1)ShowWindow(hStatic_Login_Id, SW_HIDE);
+				if (selwindow != 1)ShowWindow(hEdit_Login_Id, SW_HIDE);
+				if (selwindow != 1)ShowWindow(hStatic_Login_Pw, SW_HIDE);
+				if (selwindow != 1)ShowWindow(hEdit_Login_Pw, SW_HIDE);
+				if (selwindow != 1)ShowWindow(hButton_Login, SW_HIDE);
+				if (selwindow != 1)ShowWindow(hButton_Go_Join_Or_Update, SW_HIDE);
+				if (selwindow != 1)ShowWindow(hButton_Go_Order, SW_HIDE);
+				//사용화면 켜기
+				///사용화면 컨트롤
+				//주문가기 버튼
+				hButton_Go_Order = CreateWindow(TEXT("button"), TEXT("ORDER"), WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON,
+					910, 200, 200, 50, hWnd, (HMENU)ID_B_GO_ORDER, g_hInst, NULL);
+				if (selwindow != 4)ShowWindow(hButton_Go_Order, SW_HIDE);
+				///
+		//로그아웃 버튼
+				hButton_Logout = CreateWindow(TEXT("button"), TEXT("LOGOUT"), WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON,
+					610, 50, 200, 65, hWnd, (HMENU)ID_B_LOGOUT, g_hInst, NULL);
+				if (selwindow != 4)ShowWindow(hButton_Logout, SW_HIDE);
+				//탈퇴 버튼
+				hButton_Delete = CreateWindow(TEXT("button"), TEXT("DELETE"), WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON,
+					910, 50, 200, 65, hWnd, (HMENU)ID_B_DELETE, g_hInst, NULL);
+				if (selwindow != 4)ShowWindow(hButton_Delete, SW_HIDE);
+				//타이머 에디트
+				hEdit_Timer = CreateWindow(TEXT("edit"), NULL, WS_CHILD | WS_VISIBLE | WS_BORDER | ES_AUTOHSCROLL,
+					610, 200, 100, 100, hWnd, (HMENU)ID_E_TIMER, g_hInst, NULL);
+				if (selwindow != 4)ShowWindow(hEdit_Timer, SW_HIDE);
+				//타이머 스태틱
+				hStatic_Timer = CreateWindow(TEXT("static"), TEXT("TIME"), WS_CHILD | WS_VISIBLE | WS_BORDER | ES_AUTOHSCROLL,
+					610, 150, 40, 20, hWnd, (HMENU)ID_S_TIMER, g_hInst, NULL);
+				if (selwindow != 4)ShowWindow(hStatic_Timer, SW_HIDE);
+				///
+			}
+			//남은시간 0일때 주문 후 로그인 화면으로/남은시간 있을때 주문 후 사용화면으로
+			else if (chkorder == 1) {										//주문 잘 되었을 때
+				chkorder = 0;
+				if (selafterorder == 1)selwindow = 1;				//남은 시간 0일때 로그인화면으로 설정
+				else selwindow = 4;											//..아닐때 사용화면으로 설정
+				InvalidateRect(hWnd, NULL, TRUE);
+				//주문화면 끄기
+				if (selwindow != 3)ShowWindow(hStatic_Item, SW_HIDE);
+				if (selwindow != 3)ShowWindow(hListBox_ItemList, SW_HIDE);
+				if (selwindow != 3)ShowWindow(hStatic_OrderCount, SW_HIDE);
+				if (selwindow != 3)ShowWindow(hEdit_OrderCount, SW_HIDE);
+				if (selwindow != 3)ShowWindow(hButton_Order, SW_HIDE);
+				//남은시간 0일때 로그인화면으로 
+				if (selafterorder == 1) {
+					selafterorder = 0;
+					/////로그인화면 컨트롤
+		//로그인 아이디 스태틱
+					hStatic_Login_Id = CreateWindow(TEXT("static"), TEXT("ID"), WS_CHILD | WS_VISIBLE | WS_BORDER | ES_AUTOHSCROLL,
+						10, 0, 80, 20, hWnd, (HMENU)ID_S_LOGIN_ID, g_hInst, NULL);
+					if (selwindow != 1)ShowWindow(hStatic_Login_Id, SW_HIDE);
+					//로그인 아이디 에디트
+					hEdit_Login_Id = CreateWindow(TEXT("edit"), NULL, WS_CHILD | WS_VISIBLE | WS_BORDER | ES_AUTOHSCROLL,
+						10, 50, 100, 50, hWnd, (HMENU)ID_E_LOGIN_ID, g_hInst, NULL);
+					if (selwindow != 1)ShowWindow(hEdit_Login_Id, SW_HIDE);
+					//로그인 비번 스태틱
+					hStatic_Login_Pw = CreateWindow(TEXT("static"), TEXT("PW"), WS_CHILD | WS_VISIBLE | WS_BORDER | ES_AUTOHSCROLL,
+						10, 150, 40, 20, hWnd, (HMENU)ID_S_LOGIN_PW, g_hInst, NULL);
+					if (selwindow != 1)ShowWindow(hStatic_Login_Pw, SW_HIDE);
+					//로그인 비번 에디트
+					hEdit_Login_Pw = CreateWindow(TEXT("edit"), NULL, WS_CHILD | WS_VISIBLE | WS_BORDER | ES_AUTOHSCROLL,
+						10, 200, 100, 50, hWnd, (HMENU)ID_E_LOGIN_PW, g_hInst, NULL);
+					if (selwindow != 1)ShowWindow(hEdit_Login_Pw, SW_HIDE);
+					//로그인 버튼
+					hButton_Login = CreateWindow(TEXT("button"), TEXT("LOGIN"), WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON,
+						910, 10, 200, 50, hWnd, (HMENU)ID_B_LOGIN, g_hInst, NULL);
+					if (selwindow != 1)ShowWindow(hButton_Login, SW_HIDE);
+
+					//가입/수정 가기 버튼
+					hButton_Go_Join_Or_Update = CreateWindow(TEXT("button"), TEXT("JOIN/UPDATE"), WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON,
+						910, 100, 200, 50, hWnd, (HMENU)ID_B_GO_JOIN_OR_UPDATE, g_hInst, NULL);;
+					if (selwindow != 1)ShowWindow(hButton_Go_Join_Or_Update, SW_HIDE);
+				}
+				//남은 시간있을때 사용화면으로
+				else {
+					///사용화면 컨트롤
+					//주문가기 버튼
+					hButton_Go_Order = CreateWindow(TEXT("button"), TEXT("ORDER"), WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON,
+						910, 200, 200, 50, hWnd, (HMENU)ID_B_GO_ORDER, g_hInst, NULL);
+					if (selwindow != 4)ShowWindow(hButton_Go_Order, SW_HIDE);
+					///
+	//로그아웃 버튼
+					hButton_Logout = CreateWindow(TEXT("button"), TEXT("LOGOUT"), WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON,
+						610, 50, 200, 65, hWnd, (HMENU)ID_B_LOGOUT, g_hInst, NULL);
+					if (selwindow != 4)ShowWindow(hButton_Logout, SW_HIDE);
+					//탈퇴 버튼
+					hButton_Delete = CreateWindow(TEXT("button"), TEXT("DELETE"), WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON,
+						910, 50, 200, 65, hWnd, (HMENU)ID_B_DELETE, g_hInst, NULL);
+					if (selwindow != 4)ShowWindow(hButton_Delete, SW_HIDE);
+					//타이머 에디트
+					hEdit_Timer = CreateWindow(TEXT("edit"), NULL, WS_CHILD | WS_VISIBLE | WS_BORDER | ES_AUTOHSCROLL,
+						610, 200, 100, 100, hWnd, (HMENU)ID_E_TIMER, g_hInst, NULL);
+					if (selwindow != 4)ShowWindow(hEdit_Timer, SW_HIDE);
+					//타이머 스태틱
+					hStatic_Timer = CreateWindow(TEXT("static"), TEXT("TIME"), WS_CHILD | WS_VISIBLE | WS_BORDER | ES_AUTOHSCROLL,
+						610, 150, 40, 20, hWnd, (HMENU)ID_S_TIMER, g_hInst, NULL);
+					if (selwindow != 4)ShowWindow(hStatic_Timer, SW_HIDE);
+					///
+				}
+			}
+			//남은시간 0일때 로그인화면에서 주문화면으로
+			else if (chkpctime == 1) {															//남은시간 0일때
+				chkpctime = 0;
+				selafterorder = 1;																	//남은시간0일때로 설정
+				selwindow = 3;																		//주문화면으로
+				InvalidateRect(hWnd, NULL, TRUE);
+				//로그인화면 끄기
+				if (selwindow != 1)ShowWindow(hStatic_Login_Id, SW_HIDE);
+				if (selwindow != 1)ShowWindow(hEdit_Login_Id, SW_HIDE);
+				if (selwindow != 1)ShowWindow(hStatic_Login_Pw, SW_HIDE);
+				if (selwindow != 1)ShowWindow(hEdit_Login_Pw, SW_HIDE);
+				if (selwindow != 1)ShowWindow(hButton_Login, SW_HIDE);
+				if (selwindow != 1)ShowWindow(hButton_Go_Join_Or_Update, SW_HIDE);
+				if (selwindow != 1)ShowWindow(hButton_Go_Order, SW_HIDE);
+				//주문화면 켜기
+				///주문화면 컨트롤
+		//아이템 스태틱
+				hStatic_Item = CreateWindow(TEXT("static"), TEXT("ITEM"), WS_CHILD | WS_VISIBLE | WS_BORDER | ES_AUTOHSCROLL,
+					10, 0, 40, 20, hWnd, (HMENU)ID_S_ITEM, g_hInst, NULL);
+				if (selwindow != 3)ShowWindow(hStatic_Item, SW_HIDE);
+				//아이템리스트 리스트박스
+				hListBox_ItemList = CreateWindow(TEXT("listbox"), NULL, WS_CHILD | WS_VISIBLE | WS_BORDER | WS_VSCROLL | LBS_SORT | LBS_NOTIFY,
+					10, 100, 400, 200, hWnd, (HMENU)ID_L_ITEM, g_hInst, NULL);
+				if (selwindow != 3)ShowWindow(hListBox_ItemList, SW_HIDE);
+				//아이템주문갯수 스태틱
+				hStatic_OrderCount = CreateWindow(TEXT("static"), TEXT("Count(2자리)"), WS_CHILD | WS_VISIBLE | WS_BORDER | ES_AUTOHSCROLL,
+					510, 0, 100, 20, hWnd, (HMENU)ID_S_ORDERCOUNT, g_hInst, NULL);
+				if (selwindow != 3)ShowWindow(hStatic_OrderCount, SW_HIDE);
+				//아이템주문갯수 에디트
+				hEdit_OrderCount = CreateWindow(TEXT("edit"), NULL, WS_CHILD | WS_VISIBLE | WS_BORDER | ES_AUTOHSCROLL,
+					510, 50, 100, 50, hWnd, (HMENU)ID_E_ORDERCOUNT, g_hInst, NULL);
+				if (selwindow != 3)ShowWindow(hEdit_OrderCount, SW_HIDE);
+				//주문 버튼
+				hButton_Order = CreateWindow(TEXT("button"), TEXT("ORDER"), WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON,
+					910, 10, 200, 50, hWnd, (HMENU)ID_B_ORDER, g_hInst, NULL);
+				if (selwindow != 3)ShowWindow(hButton_Order, SW_HIDE);
+				///
+				//아이템리스트 초기화
+				SendMessage(hListBox_ItemList, LB_ADDSTRING, 0, (LPARAM)"DRINK");
+				SendMessage(hListBox_ItemList, LB_ADDSTRING, 0, (LPARAM)"FOOD");
+				SendMessage(hListBox_ItemList, LB_ADDSTRING, 0, (LPARAM)"PC");
+			}
+			//가입 및 수정화면에서 로그인화면으로
+			else if (chkjoin == 1) {										//회원가입 잘 되었을때
+				chkjoin = 0;
+				selwindow = 1;												//로그인화면 설정
+				InvalidateRect(hWnd, NULL, TRUE);
+				//가입 및 수정화면 끄기
+				if (selwindow != 2)ShowWindow(hStatic_Id, SW_HIDE);
+				if (selwindow != 2)ShowWindow(hEdit_Id, SW_HIDE);
+				if (selwindow != 2)ShowWindow(hStatic_Pw, SW_HIDE);
+				if (selwindow != 2)ShowWindow(hEdit_Pw, SW_HIDE);
+				if (selwindow != 2)ShowWindow(hStatic_Name, SW_HIDE);
+				if (selwindow != 2)ShowWindow(hEdit_Name, SW_HIDE);
+				if (selwindow != 2)ShowWindow(hStatic_Pn, SW_HIDE);
+				if (selwindow != 2)ShowWindow(hEdit_Pn, SW_HIDE);
+				if (selwindow != 2)ShowWindow(hStatic_Addr, SW_HIDE);
+				if (selwindow != 2)ShowWindow(hEdit_Addr, SW_HIDE);
+				if (selwindow != 2)ShowWindow(hStatic_Birth, SW_HIDE);
+				if (selwindow != 2)ShowWindow(hEdit_Birth, SW_HIDE);
+				if (selwindow != 2)ShowWindow(hButton_Join, SW_HIDE);
+				if (selwindow != 2)ShowWindow(hButton_Update, SW_HIDE);
+				//로그인화면 켜기
+				/////로그인화면 컨트롤
+		//로그인 아이디 스태틱
+				hStatic_Login_Id = CreateWindow(TEXT("static"), TEXT("ID"), WS_CHILD | WS_VISIBLE | WS_BORDER | ES_AUTOHSCROLL,
+					10, 0, 80, 20, hWnd, (HMENU)ID_S_LOGIN_ID, g_hInst, NULL);
+				if (selwindow != 1)ShowWindow(hStatic_Login_Id, SW_HIDE);
+				//로그인 아이디 에디트
+				hEdit_Login_Id = CreateWindow(TEXT("edit"), NULL, WS_CHILD | WS_VISIBLE | WS_BORDER | ES_AUTOHSCROLL,
+					10, 50, 100, 50, hWnd, (HMENU)ID_E_LOGIN_ID, g_hInst, NULL);
+				if (selwindow != 1)ShowWindow(hEdit_Login_Id, SW_HIDE);
+				//로그인 비번 스태틱
+				hStatic_Login_Pw = CreateWindow(TEXT("static"), TEXT("PW"), WS_CHILD | WS_VISIBLE | WS_BORDER | ES_AUTOHSCROLL,
+					10, 150, 40, 20, hWnd, (HMENU)ID_S_LOGIN_PW, g_hInst, NULL);
+				if (selwindow != 1)ShowWindow(hStatic_Login_Pw, SW_HIDE);
+				//로그인 비번 에디트
+				hEdit_Login_Pw = CreateWindow(TEXT("edit"), NULL, WS_CHILD | WS_VISIBLE | WS_BORDER | ES_AUTOHSCROLL,
+					10, 200, 100, 50, hWnd, (HMENU)ID_E_LOGIN_PW, g_hInst, NULL);
+				if (selwindow != 1)ShowWindow(hEdit_Login_Pw, SW_HIDE);
+				//로그인 버튼
+				hButton_Login = CreateWindow(TEXT("button"), TEXT("LOGIN"), WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON,
+					910, 10, 200, 50, hWnd, (HMENU)ID_B_LOGIN, g_hInst, NULL);
+				if (selwindow != 1)ShowWindow(hButton_Login, SW_HIDE);
+
+				//가입/수정 가기 버튼
+				hButton_Go_Join_Or_Update = CreateWindow(TEXT("button"), TEXT("JOIN/UPDATE"), WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON,
+					910, 100, 200, 50, hWnd, (HMENU)ID_B_GO_JOIN_OR_UPDATE, g_hInst, NULL);;
+				if (selwindow != 1)ShowWindow(hButton_Go_Join_Or_Update, SW_HIDE);
+				
+			}
+			//가입 및 수정화면에서 로그인화면으로 
+			else if (chkupdate == 1) {										//수정 잘 되었을때
+				chkupdate = 0;
+				selwindow = 1;													//로그인화면 설정
+				InvalidateRect(hWnd, NULL, TRUE);
+				//가입 및 수정화면 끄기
+				if (selwindow != 2)ShowWindow(hStatic_Id, SW_HIDE);
+				if (selwindow != 2)ShowWindow(hEdit_Id, SW_HIDE);
+				if (selwindow != 2)ShowWindow(hStatic_Pw, SW_HIDE);
+				if (selwindow != 2)ShowWindow(hEdit_Pw, SW_HIDE);
+				if (selwindow != 2)ShowWindow(hStatic_Name, SW_HIDE);
+				if (selwindow != 2)ShowWindow(hEdit_Name, SW_HIDE);
+				if (selwindow != 2)ShowWindow(hStatic_Pn, SW_HIDE);
+				if (selwindow != 2)ShowWindow(hEdit_Pn, SW_HIDE);
+				if (selwindow != 2)ShowWindow(hStatic_Addr, SW_HIDE);
+				if (selwindow != 2)ShowWindow(hEdit_Addr, SW_HIDE);
+				if (selwindow != 2)ShowWindow(hStatic_Birth, SW_HIDE);
+				if (selwindow != 2)ShowWindow(hEdit_Birth, SW_HIDE);
+				if (selwindow != 2)ShowWindow(hButton_Join, SW_HIDE);
+				if (selwindow != 2)ShowWindow(hButton_Update, SW_HIDE);
+				//로그인화면 켜기
+				/////로그인화면 컨트롤
+		//로그인 아이디 스태틱
+				hStatic_Login_Id = CreateWindow(TEXT("static"), TEXT("ID"), WS_CHILD | WS_VISIBLE | WS_BORDER | ES_AUTOHSCROLL,
+					10, 0, 80, 20, hWnd, (HMENU)ID_S_LOGIN_ID, g_hInst, NULL);
+				if (selwindow != 1)ShowWindow(hStatic_Login_Id, SW_HIDE);
+				//로그인 아이디 에디트
+				hEdit_Login_Id = CreateWindow(TEXT("edit"), NULL, WS_CHILD | WS_VISIBLE | WS_BORDER | ES_AUTOHSCROLL,
+					10, 50, 100, 50, hWnd, (HMENU)ID_E_LOGIN_ID, g_hInst, NULL);
+				if (selwindow != 1)ShowWindow(hEdit_Login_Id, SW_HIDE);
+				//로그인 비번 스태틱
+				hStatic_Login_Pw = CreateWindow(TEXT("static"), TEXT("PW"), WS_CHILD | WS_VISIBLE | WS_BORDER | ES_AUTOHSCROLL,
+					10, 150, 40, 20, hWnd, (HMENU)ID_S_LOGIN_PW, g_hInst, NULL);
+				if (selwindow != 1)ShowWindow(hStatic_Login_Pw, SW_HIDE);
+				//로그인 비번 에디트
+				hEdit_Login_Pw = CreateWindow(TEXT("edit"), NULL, WS_CHILD | WS_VISIBLE | WS_BORDER | ES_AUTOHSCROLL,
+					10, 200, 100, 50, hWnd, (HMENU)ID_E_LOGIN_PW, g_hInst, NULL);
+				if (selwindow != 1)ShowWindow(hEdit_Login_Pw, SW_HIDE);
+				//로그인 버튼
+				hButton_Login = CreateWindow(TEXT("button"), TEXT("LOGIN"), WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON,
+					910, 10, 200, 50, hWnd, (HMENU)ID_B_LOGIN, g_hInst, NULL);
+				if (selwindow != 1)ShowWindow(hButton_Login, SW_HIDE);
+
+				//가입/수정 가기 버튼
+				hButton_Go_Join_Or_Update = CreateWindow(TEXT("button"), TEXT("JOIN/UPDATE"), WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON,
+					910, 100, 200, 50, hWnd, (HMENU)ID_B_GO_JOIN_OR_UPDATE, g_hInst, NULL);;
+				if (selwindow != 1)ShowWindow(hButton_Go_Join_Or_Update, SW_HIDE);
+			}
+			//사용화면(로그아웃/탈퇴)/주문화면/로그인화면(자리반납)에서 자리선택화면으로 
+		else if (gohome == 1) {																				//자리선택화면으로 가는 상황
+			gohome = 0;
+			selwindow = 0;																						//자리선택화면 설정
+			InvalidateRect(hWnd, NULL, TRUE);
+			//사용화면 끄기
+			if (selwindow != 4)ShowWindow(hButton_Go_Order, SW_HIDE);
+			if (selwindow != 4)ShowWindow(hButton_Logout, SW_HIDE);
+			if (selwindow != 4)ShowWindow(hButton_Delete, SW_HIDE);
+			if (selwindow != 4)ShowWindow(hEdit_Timer, SW_HIDE);
+			if (selwindow != 4)ShowWindow(hStatic_Timer, SW_HIDE);
+			//주문화면 끄기
+			if (selwindow != 3)ShowWindow(hStatic_Item, SW_HIDE);
+			if (selwindow != 3)ShowWindow(hListBox_ItemList, SW_HIDE);
+			if (selwindow != 3)ShowWindow(hStatic_OrderCount, SW_HIDE);
+			if (selwindow != 3)ShowWindow(hEdit_OrderCount, SW_HIDE);
+			if (selwindow != 3)ShowWindow(hButton_Order, SW_HIDE);
+			//로그인화면 끄기
+			if (selwindow != 1)ShowWindow(hStatic_Login_Id, SW_HIDE);
+			if (selwindow != 1)ShowWindow(hEdit_Login_Id, SW_HIDE);
+			if (selwindow != 1)ShowWindow(hStatic_Login_Pw, SW_HIDE);
+			if (selwindow != 1)ShowWindow(hEdit_Login_Pw, SW_HIDE);
+			if (selwindow != 1)ShowWindow(hButton_Login, SW_HIDE);
+			if (selwindow != 1)ShowWindow(hButton_Go_Join_Or_Update, SW_HIDE);
+			if (selwindow != 1)ShowWindow(hButton_Go_Order, SW_HIDE);
+			//자리선택화면 켜기
+			///자리선택화면 컨트롤
+
+	//자리번호 스태틱
+			hStatic_Sn = CreateWindow(TEXT("static"), TEXT("SN(2자리)"), WS_CHILD | WS_VISIBLE | WS_BORDER | ES_AUTOHSCROLL,
+				10, 0, 80, 20, hWnd, (HMENU)ID_S_SN, g_hInst, NULL);
+			if (selwindow != 0)ShowWindow(hStatic_Sn, SW_HIDE);
+			//자리번호 에디트
+			hEdit_Sn = CreateWindow(TEXT("edit"), NULL, WS_CHILD | WS_VISIBLE | WS_BORDER | ES_AUTOHSCROLL,
+				10, 50, 100, 50, hWnd, (HMENU)ID_E_SN, g_hInst, NULL);
+			if (selwindow != 0)ShowWindow(hEdit_Sn, SW_HIDE);
+			//자리선택 버튼
+			hButton_SelSeat = CreateWindow(TEXT("button"), TEXT("SELECTSEAT"), WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON,
+				910, 10, 200, 50, hWnd, (HMENU)ID_B_SELSEAT, g_hInst, NULL);
+			if (selwindow != 0)ShowWindow(hButton_SelSeat, SW_HIDE);
+		}
+			// 화면 갱신 요청 (변경된 상태 출력)
+			break;
 			//남은 시간 타이머(0이 될때까지 시간 감소하고 0이면 로그아웃처리하기)
 		case 1:
 			if (chktimer == 1) {
@@ -504,6 +766,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT iMessage, WPARAM wParam, LPARAM lParam)
 			//나가기버튼 눌렸을때/남은시간 0일때 남은시간 타이머 종료하고 다시 타이머 만들기(로그인을 계속 받기 위해)
 		case 2:
 			if (chkendbtn == 1) {
+				gohome = 1;
 				KillTimer(hWnd, 1);																														//타이머 끄기
 				chktimer = 0;																																//타이머 끄는 상태로
 				SetTimer(hWnd, 1, 1000, NULL);																									//유저 남은 시간 타이머 다시 생성
@@ -514,171 +777,136 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT iMessage, WPARAM wParam, LPARAM lParam)
 			}
 			break;
 		}
+		case 3:																																					//자리반납타이머
+			if (returnsn == 1) {																															//자리반납동작일때
+				returnsntime -= 1000000;																											//자리반납시간 줄이기
+				if (returnsntime <= 0) {																													//제한시간 경과
+					returnsntime = 1000000;																											//자리반납시간 초기화
+					returnsn = 0;																															//자리반납동작 끄기
+					lstrcpy(tgcmdserver, "8");
+					lstrcat(tgcmdserver, "SN:");
+					lstrcat(tgcmdserver, tgnum);
+					nReturn = send(clientsock, tgcmdserver, sizeof(tgcmdserver), 0);											//서버로 자리반납 커멘드 보내기
+					MessageBox(hWnd, "제한시간10초 초과로 좌석번호반납됨", "좌석반납", MB_OK);													
+				}
+			}
+			break;
 		return 0;
 
-		//메뉴 누르면 해당 프로시저 띄우기
 	case WM_COMMAND:
 		switch (LOWORD(wParam))
 		{
-			//자리선택 눌렸을때
-		case ID_B_GO_ORDER:
-			hWnd_O = CreateWindow(O_Class, O_Class, WS_VISIBLE | WS_OVERLAPPEDWINDOW, CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT, NULL, (HMENU)NULL, g_hInst, NULL);
-			ShowWindow(hWnd_O, SW_SHOW);
-			break;
-		case ID_B_SELSEAT:
-			lstrcpy(tgcmdserver, "1");
-			GetWindowText(hEdit_Sn, tgnum, sizeof(tgnum));																				//자리 선택(02등 숫자 2자리 형식으로)
-			lstrcat(tgcmdserver, tgnum);
-			nReturn = send(clientsock, tgcmdserver, sizeof(tgcmdserver), 0);														//서버로 자리선택 커맨드 보내기
-			/*if (chkseat == 1 && chklogin == 0) {
-				hWnd_L = CreateWindow(L_Class, L_Class, WS_VISIBLE | WS_OVERLAPPEDWINDOW, CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT, NULL, (HMENU)NULL, g_hInst, NULL);
-				ShowWindow(hWnd_L, SW_SHOW);
-			}
-			else {
-				if (chkseat == 0)MessageBox(hWnd, "자리 선택 먼저 하세요!!", "오류", MB_OK);
-				if (chklogin == 1)MessageBox(hWnd, "로그인 되어 있습니다!!", "오류", MB_OK);
-			}*/
-			break;
-		case ID_B_LOGOUT:																																			//로그아웃(로그인 했을때)
-			if (chklogin == 1) {
-				lstrcpy(tgcmdserver, "");
-				lstrcpy(tgcmdserver, "5ID:");
-				lstrcat(tgcmdserver, userid);
-				lstrcat(tgcmdserver, "PW:");
-				lstrcat(tgcmdserver, userpw);
-				lstrcat(tgcmdserver, "SN:");
-				lstrcat(tgcmdserver, usersn);
-				chkendbtn = 1;																																				//로그아웃/탈퇴 수행 했을때로
-				nReturn = send(clientsock, tgcmdserver, sizeof(tgcmdserver), 0);																//서버로 로그아웃 커멘드 보내기
-				pctime = 0;
-				wsprintf(tpctime, "%d", pctime);
-				SetWindowText(hEdit_Timer, tpctime);																										//프로시저의 타이머 에디트에 유저 남은 시간 0으로 출력
-			}
-			else MessageBox(hWnd, "로그인하세요!!", "오류", MB_OK);
-			break;
-		case ID_B_DELETE:																																			//탈퇴 수행(로그인 했을때)
-			if (chklogin == 1) {
-				lstrcpy(tgcmdserver, "");
-				lstrcpy(tgcmdserver, "7ID:");
-				lstrcat(tgcmdserver, userid);
-				lstrcat(tgcmdserver, "PW:");
-				lstrcat(tgcmdserver, userpw);
-				lstrcat(tgcmdserver, "SN:");
-				lstrcat(tgcmdserver, usersn);
-				chkendbtn = 1;																																				//로그아웃/탈퇴 수행 했을때로
-				nReturn = send(clientsock, tgcmdserver, sizeof(tgcmdserver), 0);																//서버로 탈퇴 커맨드 보내기
-				pctime = 0;
-				wsprintf(tpctime, "%d", pctime);
-				SetWindowText(hEdit_Timer, tpctime);																										//프로시저의 타이머 에디트에 유저 남은 시간 0으로 출력
-			}
-			else MessageBox(hWnd, "로그인하세요!!", "오류", MB_OK);
-			break;
-		}
-		return 0;
-
-	case WM_DESTROY:
-		PostQuitMessage(0);
-		return 0;
-	}
-	return(DefWindowProc(hWnd, iMessage, wParam, lParam));
-}
-//LRESULT CALLBACK ConnectProc(HWND, UINT, WPARAM, LPARAM):연결화면(연결 수행)
-LRESULT CALLBACK ConnectProc(HWND hWnd, UINT iMessage, WPARAM wParam, LPARAM lParam) {
-	switch (iMessage) {
-	case WM_CREATE:
-		///컨트롤
-		//아이피 스태틱
-		hStatic_Ip = CreateWindow(TEXT("static"), TEXT("IP"), WS_CHILD | WS_VISIBLE | WS_BORDER | ES_AUTOHSCROLL,
-			10, 0, 20, 20, hWnd, (HMENU)ID_S_IP, g_hInst, NULL);
-		//아이피 에디트
-		hEdit_Ip = CreateWindow(TEXT("edit"), NULL, WS_CHILD | WS_VISIBLE | WS_BORDER | ES_AUTOHSCROLL,
-			10, 50, 200, 50, hWnd, (HMENU)ID_E_IP, g_hInst, NULL);
-		//포트 스태틱
-		hStatic_Port = CreateWindow(TEXT("static"), TEXT("PORT"), WS_CHILD | WS_VISIBLE | WS_BORDER | ES_AUTOHSCROLL,
-			310, 0, 40, 20, hWnd, (HMENU)ID_S_PORT, g_hInst, NULL);
-		//포트 에디트
-		hEdit_Port = CreateWindow(TEXT("edit"), NULL, WS_CHILD | WS_VISIBLE | WS_BORDER | ES_AUTOHSCROLL,
-			310, 50, 200, 50, hWnd, (HMENU)ID_E_PORT, g_hInst, NULL);
-		//연결 버튼
-		hButton_Connect = CreateWindow(TEXT("button"), TEXT("CONNECT"), WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON,
-			310, 200, 400, 100, hWnd, (HMENU)ID_B_CONNECT, g_hInst, NULL);
-		///
-		//연결의 IP와 PORT에디트에 띄우기
-		SetWindowText(hEdit_Ip, tgIp);
-		SetWindowText(hEdit_Port, tgPort);
-		return 0;
-	case WM_COMMAND:
-		switch (LOWORD(wParam))
-		{
-		case ID_B_CONNECT:																																			//연결 버튼 눌렸을때 연결 수행
-			CLIENT_Open();
-			break;
-		}
-		return 0;
-	case WM_DESTROY:
-		break;
-	}
-	return(DefWindowProc(hWnd, iMessage, wParam, lParam));
-}
-//LRESULT CALLBACK Join_Or_UpdateProc(HWND, UINT, WPARAM, LPARAM):가입/수정화면(가입/수정 수행하고 로그인된 유저의 정보를 띄우기)
-LRESULT CALLBACK Join_Or_UpdateProc(HWND hWnd, UINT iMessage, WPARAM wParam, LPARAM lParam) {
-	switch (iMessage) {
-	case WM_CREATE:
-		///컨트롤
+		//로그인화면에서 가입 및 수정 버튼 눌렸을때 로그인에서 가입 및 수정으로
+		case ID_B_GO_JOIN_OR_UPDATE:
+			selwindow = 2;																																	//가입 및 수정화면으로 설정
+			InvalidateRect(hWnd, NULL, TRUE);
+			//로그인화면 끄기
+			if (selwindow != 1)ShowWindow(hStatic_Login_Id, SW_HIDE);
+			if (selwindow != 1)ShowWindow(hEdit_Login_Id, SW_HIDE);
+			if (selwindow != 1)ShowWindow(hStatic_Login_Pw, SW_HIDE);
+			if (selwindow != 1)ShowWindow(hEdit_Login_Pw, SW_HIDE);
+			if (selwindow != 1)ShowWindow(hButton_Login, SW_HIDE);
+			if (selwindow != 1)ShowWindow(hButton_Go_Join_Or_Update, SW_HIDE);
+			if (selwindow != 1)ShowWindow(hButton_Go_Order, SW_HIDE);
+			//가입 및 수정화면으로 켜기
+			///가입 및 수정화면 컨트롤
 		//아이디 스태틱
-		hStatic_Id = CreateWindow(TEXT("static"), TEXT("ID"), WS_CHILD | WS_VISIBLE | WS_BORDER | ES_AUTOHSCROLL,
-			10, 0, 40, 20, hWnd, (HMENU)ID_S_ID, g_hInst, NULL);
-		//아이디 에디트
-		hEdit_Id = CreateWindow(TEXT("edit"), NULL, WS_CHILD | WS_VISIBLE | WS_BORDER | ES_AUTOHSCROLL,
-			10, 50, 100, 50, hWnd, (HMENU)ID_E_ID, g_hInst, NULL);
-		//비번 스태틱
-		hStatic_Pw = CreateWindow(TEXT("static"), TEXT("PW"), WS_CHILD | WS_VISIBLE | WS_BORDER | ES_AUTOHSCROLL,
-			10, 150, 40, 20, hWnd, (HMENU)ID_S_PW, g_hInst, NULL);
-		//비번 에디트
-		hEdit_Pw = CreateWindow(TEXT("edit"), NULL, WS_CHILD | WS_VISIBLE | WS_BORDER | ES_AUTOHSCROLL,
-			10, 200, 100, 50, hWnd, (HMENU)ID_E_PW, g_hInst, NULL);
-		//이름 스태틱
-		hStatic_Name = CreateWindow(TEXT("static"), TEXT("NAME"), WS_CHILD | WS_VISIBLE | WS_BORDER | ES_AUTOHSCROLL,
-			10, 300, 40, 20, hWnd, (HMENU)ID_S_NAME, g_hInst, NULL);
-		//이름 에디트
-		hEdit_Name = CreateWindow(TEXT("edit"), NULL, WS_CHILD | WS_VISIBLE | WS_BORDER | ES_AUTOHSCROLL,
-			10, 350, 100, 50, hWnd, (HMENU)ID_E_NAME, g_hInst, NULL);
-		//전화번호 스태틱
-		hStatic_Pn = CreateWindow(TEXT("static"), TEXT("PN"), WS_CHILD | WS_VISIBLE | WS_BORDER | ES_AUTOHSCROLL,
-			10, 450, 40, 20, hWnd, (HMENU)ID_S_PN, g_hInst, NULL);
-		//전화번호 에디트
-		hEdit_Pn = CreateWindow(TEXT("edit"), NULL, WS_CHILD | WS_VISIBLE | WS_BORDER | ES_AUTOHSCROLL,
-			10, 500, 100, 50, hWnd, (HMENU)ID_E_PN, g_hInst, NULL);
-		//주소 스태틱
-		hStatic_Addr = CreateWindow(TEXT("static"), TEXT("ADDR"), WS_CHILD | WS_VISIBLE | WS_BORDER | ES_AUTOHSCROLL,
-			510, 0, 40, 20, hWnd, (HMENU)ID_S_ADDR, g_hInst, NULL);
-		//주소 에디트
-		hEdit_Addr = CreateWindow(TEXT("edit"), NULL, WS_CHILD | WS_VISIBLE | WS_BORDER | ES_AUTOHSCROLL,
-			510, 50, 100, 50, hWnd, (HMENU)ID_E_ADDR, g_hInst, NULL);
-		//생일 스태틱
-		hStatic_Birth = CreateWindow(TEXT("static"), TEXT("BIRTH"), WS_CHILD | WS_VISIBLE | WS_BORDER | ES_AUTOHSCROLL,
-			510, 150, 50, 20, hWnd, (HMENU)ID_S_BIRTH, g_hInst, NULL);
-		//생일 에디트
-		hEdit_Birth = CreateWindow(TEXT("edit"), NULL, WS_CHILD | WS_VISIBLE | WS_BORDER | ES_AUTOHSCROLL,
-			510, 200, 100, 50, hWnd, (HMENU)ID_E_BIRTH, g_hInst, NULL);
-		//가입 버튼
-		hButton_Join = CreateWindow(TEXT("button"), TEXT("JOIN"), WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON,
-			910, 10, 300, 200, hWnd, (HMENU)ID_B_JOIN, g_hInst, NULL);
-		//수정 버튼
-		hButton_Update = CreateWindow(TEXT("button"), TEXT("UPDATE"), WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON,
-			910, 300, 300, 200, hWnd, (HMENU)ID_B_UPDATE, g_hInst, NULL);
-		///
-		//로그인 된 유저 정보 띄우기
-		SetWindowText(hEdit_Id, userid);																													//아이디
-		SetWindowText(hEdit_Pw, userpw);																												//비번
-		SetWindowText(hEdit_Name, tgName);																											//이름
-		SetWindowText(hEdit_Pn, tgPn);																														//전화번호
-		SetWindowText(hEdit_Addr, tgAddr);																											//주소
-		SetWindowText(hEdit_Birth, tgBirth);																											//생일
-		return 0;
-	case WM_COMMAND:
-		switch (LOWORD(wParam))
-		{
+			hStatic_Id = CreateWindow(TEXT("static"), TEXT("ID"), WS_CHILD | WS_VISIBLE | WS_BORDER | ES_AUTOHSCROLL,
+				10, 0, 40, 20, hWnd, (HMENU)ID_S_ID, g_hInst, NULL);
+			if (selwindow != 2)ShowWindow(hStatic_Id, SW_HIDE);
+			//아이디 에디트
+			hEdit_Id = CreateWindow(TEXT("edit"), NULL, WS_CHILD | WS_VISIBLE | WS_BORDER | ES_AUTOHSCROLL,
+				10, 50, 100, 50, hWnd, (HMENU)ID_E_ID, g_hInst, NULL);
+			if (selwindow != 2)ShowWindow(hEdit_Id, SW_HIDE);
+			//비번 스태틱
+			hStatic_Pw = CreateWindow(TEXT("static"), TEXT("PW"), WS_CHILD | WS_VISIBLE | WS_BORDER | ES_AUTOHSCROLL,
+				10, 150, 40, 20, hWnd, (HMENU)ID_S_PW, g_hInst, NULL);
+			if (selwindow != 2)ShowWindow(hStatic_Pw, SW_HIDE);
+			//비번 에디트
+			hEdit_Pw = CreateWindow(TEXT("edit"), NULL, WS_CHILD | WS_VISIBLE | WS_BORDER | ES_AUTOHSCROLL,
+				10, 200, 100, 50, hWnd, (HMENU)ID_E_PW, g_hInst, NULL);
+			if (selwindow != 2)ShowWindow(hEdit_Pw, SW_HIDE);
+			//이름 스태틱
+			hStatic_Name = CreateWindow(TEXT("static"), TEXT("NAME"), WS_CHILD | WS_VISIBLE | WS_BORDER | ES_AUTOHSCROLL,
+				10, 300, 40, 20, hWnd, (HMENU)ID_S_NAME, g_hInst, NULL);
+			if (selwindow != 2)ShowWindow(hStatic_Name, SW_HIDE);
+			//이름 에디트
+			hEdit_Name = CreateWindow(TEXT("edit"), NULL, WS_CHILD | WS_VISIBLE | WS_BORDER | ES_AUTOHSCROLL,
+				10, 350, 100, 50, hWnd, (HMENU)ID_E_NAME, g_hInst, NULL);
+			if (selwindow != 2)ShowWindow(hEdit_Name, SW_HIDE);
+			//전화번호 스태틱
+			hStatic_Pn = CreateWindow(TEXT("static"), TEXT("PN"), WS_CHILD | WS_VISIBLE | WS_BORDER | ES_AUTOHSCROLL,
+				10, 450, 40, 20, hWnd, (HMENU)ID_S_PN, g_hInst, NULL);
+			if (selwindow != 2)ShowWindow(hStatic_Pn, SW_HIDE);
+			//전화번호 에디트
+			hEdit_Pn = CreateWindow(TEXT("edit"), NULL, WS_CHILD | WS_VISIBLE | WS_BORDER | ES_AUTOHSCROLL,
+				10, 500, 100, 50, hWnd, (HMENU)ID_E_PN, g_hInst, NULL);
+			if (selwindow != 2)ShowWindow(hEdit_Pn, SW_HIDE);
+			//주소 스태틱
+			hStatic_Addr = CreateWindow(TEXT("static"), TEXT("ADDR"), WS_CHILD | WS_VISIBLE | WS_BORDER | ES_AUTOHSCROLL,
+				510, 0, 40, 20, hWnd, (HMENU)ID_S_ADDR, g_hInst, NULL);
+			if (selwindow != 2)ShowWindow(hStatic_Addr, SW_HIDE);
+			//주소 에디트
+			hEdit_Addr = CreateWindow(TEXT("edit"), NULL, WS_CHILD | WS_VISIBLE | WS_BORDER | ES_AUTOHSCROLL,
+				510, 50, 100, 50, hWnd, (HMENU)ID_E_ADDR, g_hInst, NULL);
+			if (selwindow != 2)ShowWindow(hEdit_Addr, SW_HIDE);
+			//생일 스태틱
+			hStatic_Birth = CreateWindow(TEXT("static"), TEXT("BIRTH"), WS_CHILD | WS_VISIBLE | WS_BORDER | ES_AUTOHSCROLL,
+				510, 150, 50, 20, hWnd, (HMENU)ID_S_BIRTH, g_hInst, NULL);
+			if (selwindow != 2)ShowWindow(hStatic_Birth, SW_HIDE);
+			//생일 에디트
+			hEdit_Birth = CreateWindow(TEXT("edit"), NULL, WS_CHILD | WS_VISIBLE | WS_BORDER | ES_AUTOHSCROLL,
+				510, 200, 100, 50, hWnd, (HMENU)ID_E_BIRTH, g_hInst, NULL);
+			if (selwindow != 2)ShowWindow(hEdit_Birth, SW_HIDE);
+			//가입 버튼
+			hButton_Join = CreateWindow(TEXT("button"), TEXT("JOIN"), WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON,
+				910, 10, 300, 200, hWnd, (HMENU)ID_B_JOIN, g_hInst, NULL);
+			if (selwindow != 2)ShowWindow(hButton_Join, SW_HIDE);
+			//수정 버튼
+			hButton_Update = CreateWindow(TEXT("button"), TEXT("UPDATE"), WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON,
+				910, 300, 300, 200, hWnd, (HMENU)ID_B_UPDATE, g_hInst, NULL);
+			if (selwindow != 2)ShowWindow(hButton_Update, SW_HIDE);
+			///
+			break;
+			//로그인 버튼 눌렸을때
+		case ID_B_LOGIN:
+			returnsn = 0;																																				//자리반납 동작 끄기
+			KillTimer(hWnd, 3);																																		//자리반납 타이머 끄기
+			//커맨드와 정보 문자열 빈칸으로 초기화
+			lstrcpy(tgcmdserver, "");																																//커맨드
+			lstrcpy(tgId, "");																																			//아이디
+			lstrcpy(tgPw, "");																																			//비번
+			//로그인 정보 에디트에서 정보 문자열 담기
+			GetWindowText(hEdit_Login_Id, tgId, sizeof(tgId));
+			GetWindowText(hEdit_Login_Pw, tgPw, sizeof(tgPw));
+			lstrcpy(tgcmdserver, "4ID:");
+			lstrcat(tgcmdserver, tgId);
+			lstrcat(tgcmdserver, "PW:");
+			lstrcat(tgcmdserver, tgPw);
+			nReturn = send(clientsock, tgcmdserver, sizeof(tgcmdserver), 0);																	//서버에 로그인 커맨드 보내기
+			break;
+
+			//아이템리스트 노티피
+		case ID_L_ITEM:
+			switch (HIWORD(wParam)) {
+			case LBN_SELCHANGE:
+				selitemi = SendMessage(hListBox_ItemList, LB_GETCURSEL, 0, 0);													//주문 상품 선택(리스트박스의 인덱스로 1자리 형식으로)
+				selitemi += 1;
+				wsprintf(tgselitemi, "%d", selitemi);																									//아이템 인덱스 담기
+			}
+			break;
+			//주문 눌렸을때
+		case ID_B_ORDER:
+			//추가될 기능: 로그인 된 아이디까지 같이 보내기
+			lstrcpy(tgcmdserver, "2");
+			lstrcat(tgcmdserver, tgselitemi);
+			GetWindowText(hEdit_OrderCount, tgitemcount, sizeof(tgitemcount));													//아이템주문갯수 문자열에 담기
+			lstrcat(tgcmdserver, tgitemcount);
+			lstrcat(tgcmdserver, "ID:");																														//입력아이디 문자열에 담기
+			lstrcat(tgcmdserver, tgId);
+			nReturn = send(clientsock, tgcmdserver, sizeof(tgcmdserver), 0);															//서버로 주문 커맨드 보내기
+			break;
+
 			//가입버튼 눌렸을때
 		case ID_B_JOIN:
 			//커맨드,계정 정보 문자열 빈칸으로 초기화
@@ -741,119 +969,94 @@ LRESULT CALLBACK Join_Or_UpdateProc(HWND hWnd, UINT iMessage, WPARAM wParam, LPA
 			lstrcat(tgcmdserver, tgBirth);
 			nReturn = send(clientsock, tgcmdserver, sizeof(tgcmdserver), 0);																			//서버로 수정 커맨드 보내기
 			break;
-		}
-		return 0;
-	case WM_DESTROY:
-		break;
-	}
-	return(DefWindowProc(hWnd, iMessage, wParam, lParam));
-}
-//LRESULT CALLBACK LoginProc(HWND, UINT, WPARAM, LPARAM):로그인화면(로그인 수행)
-LRESULT CALLBACK LoginProc(HWND hWnd, UINT iMessage, WPARAM wParam, LPARAM lParam) {
-	switch (iMessage) {
-	case WM_CREATE:
-		///컨트롤
-		//로그인 아이디 스태틱
-		hStatic_Login_Id = CreateWindow(TEXT("static"), TEXT("ID"), WS_CHILD | WS_VISIBLE | WS_BORDER | ES_AUTOHSCROLL,
-			10, 0, 40, 20, hWnd, (HMENU)ID_S_LOGIN_ID, g_hInst, NULL);
-		//로그인 아이디 에디트
-		hEdit_Login_Id = CreateWindow(TEXT("edit"), NULL, WS_CHILD | WS_VISIBLE | WS_BORDER | ES_AUTOHSCROLL,
-			10, 50, 100, 50, hWnd, (HMENU)ID_E_LOGIN_ID, g_hInst, NULL);
-		//로그인 비번 스태틱
-		hStatic_Login_Pw = CreateWindow(TEXT("static"), TEXT("PW"), WS_CHILD | WS_VISIBLE | WS_BORDER | ES_AUTOHSCROLL,
-			10, 150, 40, 20, hWnd, (HMENU)ID_S_LOGIN_PW, g_hInst, NULL);
-		//로그인 비번 에디트
-		hEdit_Login_Pw = CreateWindow(TEXT("edit"), NULL, WS_CHILD | WS_VISIBLE | WS_BORDER | ES_AUTOHSCROLL,
-			10, 200, 100, 50, hWnd, (HMENU)ID_E_LOGIN_PW, g_hInst, NULL);
-		//로그인 버튼
-		hButton_Login = CreateWindow(TEXT("button"), TEXT("LOGIN"), WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON,
-			910, 10, 200, 50, hWnd, (HMENU)ID_B_LOGIN, g_hInst, NULL);
-		hButton_Go_Join_Or_Update = CreateWindow(TEXT("button"), TEXT("JOIN/UPDATE"), WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON,
-			910, 100, 200, 50, hWnd, (HMENU)ID_B_GO_JOIN_OR_UPDATE, g_hInst, NULL);
-		///
-		return 0;
-	case WM_COMMAND:
-		switch (LOWORD(wParam))
-		{
-		case ID_B_GO_JOIN_OR_UPDATE:
-			hWnd_JU = CreateWindow(JU_Class, JU_Class, WS_VISIBLE | WS_OVERLAPPEDWINDOW, CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT, NULL, (HMENU)NULL, g_hInst, NULL);
-			ShowWindow(hWnd_JU, SW_SHOW);
-			break;
-			//로그인 버튼 눌렸을때
-		case ID_B_LOGIN:
-			//커맨드와 정보 문자열 빈칸으로 초기화
-			lstrcpy(tgcmdserver, "");																																//커맨드
-			lstrcpy(tgId, "");																																			//아이디
-			lstrcpy(tgPw, "");																																			//비번
-			//로그인 정보 에디트에서 정보 문자열 담기
-			GetWindowText(hEdit_Login_Id, tgId, sizeof(tgId));
-			GetWindowText(hEdit_Login_Pw, tgPw, sizeof(tgPw));
-			lstrcpy(tgcmdserver, "4ID:");
-			lstrcat(tgcmdserver, tgId);
-			lstrcat(tgcmdserver, "PW:");
-			lstrcat(tgcmdserver, tgPw);
-			nReturn = send(clientsock, tgcmdserver, sizeof(tgcmdserver), 0);																	//서버에 로그인 커맨드 보내기
-			break;
-		}
-		return 0;
-	case WM_DESTROY:
-		break;
-	}
-	return(DefWindowProc(hWnd, iMessage, wParam, lParam));
-}
-//LRESULT CALLBACK SelSeatProc(HWND, UINT, WPARAM, LPARAM):자리선택화면(자리선택 수행)
 
-//LRESULT CALLBACK OrderProc(HWND, UINT, WPARAM, LPARAM):주문화면(주문 수행)
-LRESULT CALLBACK OrderProc(HWND hWnd, UINT iMessage, WPARAM wParam, LPARAM lParam) {
-	switch (iMessage) {
-	case WM_CREATE:
-		///컨트롤
-		//아이템 스태틱
-		hStatic_Item = CreateWindow(TEXT("static"), TEXT("ITEM"), WS_CHILD | WS_VISIBLE | WS_BORDER | ES_AUTOHSCROLL,
-			10, 0, 40, 20, hWnd, (HMENU)ID_S_ITEM, g_hInst, NULL);
-		//아이템리스트 리스트박스
-		hListBox_ItemList = CreateWindow(TEXT("listbox"), NULL, WS_CHILD | WS_VISIBLE | WS_BORDER | WS_VSCROLL | LBS_SORT | LBS_NOTIFY,
-			10, 100, 400, 200, hWnd, (HMENU)ID_L_ITEM, g_hInst, NULL);
-		//아이템주문갯수 스태틱
-		hStatic_OrderCount = CreateWindow(TEXT("static"), TEXT("Count(2자리)"), WS_CHILD | WS_VISIBLE | WS_BORDER | ES_AUTOHSCROLL,
-			510, 0, 100, 20, hWnd, (HMENU)ID_S_ORDERCOUNT, g_hInst, NULL);
-		//아이템주문갯수 에디트
-		hEdit_OrderCount = CreateWindow(TEXT("edit"), NULL, WS_CHILD | WS_VISIBLE | WS_BORDER | ES_AUTOHSCROLL,
-			510, 50, 100, 50, hWnd, (HMENU)ID_E_ORDERCOUNT, g_hInst, NULL);
-		//주문 버튼
-		hButton_Order = CreateWindow(TEXT("button"), TEXT("ORDER"), WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON,
-			910, 10, 200, 50, hWnd, (HMENU)ID_B_ORDER, g_hInst, NULL);
-		///
-		//아이템리스트 초기화
-		SendMessage(hListBox_ItemList, LB_ADDSTRING, 0, (LPARAM)"DRINK");
-		SendMessage(hListBox_ItemList, LB_ADDSTRING, 0, (LPARAM)"FOOD");
-		SendMessage(hListBox_ItemList, LB_ADDSTRING, 0, (LPARAM)"PC");
-		return 0;
-	case WM_COMMAND:
-		switch (LOWORD(wParam)) {
-			//아이템리스트 노티피
-		case ID_L_ITEM:
-			switch (HIWORD(wParam)) {
-			case LBN_SELCHANGE:
-				selitemi = SendMessage(hListBox_ItemList, LB_GETCURSEL, 0, 0);													//주문 상품 선택(리스트박스의 인덱스로 1자리 형식으로)
-				selitemi += 1;
-				wsprintf(tgselitemi, "%d", selitemi);																									//아이템 인덱스 담기
-			}
+			//사용화면애서 주문가기 버튼 눌렸을때 사용화면에서 주문화면으로 
+		case ID_B_GO_ORDER:
+			selwindow = 3;														//주문화면으로 설정
+			InvalidateRect(hWnd, NULL, TRUE);
+			//로그인화면 끄기
+			if (selwindow != 1)ShowWindow(hStatic_Login_Id, SW_HIDE);
+			if (selwindow != 1)ShowWindow(hEdit_Login_Id, SW_HIDE);
+			if (selwindow != 1)ShowWindow(hStatic_Login_Pw, SW_HIDE);
+			if (selwindow != 1)ShowWindow(hEdit_Login_Pw, SW_HIDE);
+			if (selwindow != 1)ShowWindow(hButton_Login, SW_HIDE);
+			if (selwindow != 1)ShowWindow(hButton_Go_Join_Or_Update, SW_HIDE);
+			if (selwindow != 1)ShowWindow(hButton_Go_Order, SW_HIDE);
+			//사용화면끄기
+			if (selwindow != 4)ShowWindow(hButton_Go_Order, SW_HIDE);
+			if (selwindow != 4)ShowWindow(hButton_Logout, SW_HIDE);
+			if (selwindow != 4)ShowWindow(hButton_Delete, SW_HIDE);
+			if (selwindow != 4)ShowWindow(hEdit_Timer, SW_HIDE);
+			if (selwindow != 4)ShowWindow(hStatic_Timer, SW_HIDE);
+			//주문화면 켜기
+			///주문화면 컨트롤
+	//아이템 스태틱
+			hStatic_Item = CreateWindow(TEXT("static"), TEXT("ITEM"), WS_CHILD | WS_VISIBLE | WS_BORDER | ES_AUTOHSCROLL,
+				10, 0, 40, 20, hWnd, (HMENU)ID_S_ITEM, g_hInst, NULL);
+			if (selwindow != 3)ShowWindow(hStatic_Item, SW_HIDE);
+			//아이템리스트 리스트박스
+			hListBox_ItemList = CreateWindow(TEXT("listbox"), NULL, WS_CHILD | WS_VISIBLE | WS_BORDER | WS_VSCROLL | LBS_SORT | LBS_NOTIFY,
+				10, 100, 400, 200, hWnd, (HMENU)ID_L_ITEM, g_hInst, NULL);
+			if (selwindow != 3)ShowWindow(hListBox_ItemList, SW_HIDE);
+			//아이템주문갯수 스태틱
+			hStatic_OrderCount = CreateWindow(TEXT("static"), TEXT("Count(2자리)"), WS_CHILD | WS_VISIBLE | WS_BORDER | ES_AUTOHSCROLL,
+				510, 0, 100, 20, hWnd, (HMENU)ID_S_ORDERCOUNT, g_hInst, NULL);
+			if (selwindow != 3)ShowWindow(hStatic_OrderCount, SW_HIDE);
+			//아이템주문갯수 에디트
+			hEdit_OrderCount = CreateWindow(TEXT("edit"), NULL, WS_CHILD | WS_VISIBLE | WS_BORDER | ES_AUTOHSCROLL,
+				510, 50, 100, 50, hWnd, (HMENU)ID_E_ORDERCOUNT, g_hInst, NULL);
+			if (selwindow != 3)ShowWindow(hEdit_OrderCount, SW_HIDE);
+			//주문 버튼
+			hButton_Order = CreateWindow(TEXT("button"), TEXT("ORDER"), WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON,
+				910, 10, 200, 50, hWnd, (HMENU)ID_B_ORDER, g_hInst, NULL);
+			if (selwindow != 3)ShowWindow(hButton_Order, SW_HIDE);
+			///
+			//아이템리스트 초기화
+			SendMessage(hListBox_ItemList, LB_ADDSTRING, 0, (LPARAM)"DRINK");
+			SendMessage(hListBox_ItemList, LB_ADDSTRING, 0, (LPARAM)"FOOD");
+			SendMessage(hListBox_ItemList, LB_ADDSTRING, 0, (LPARAM)"PC");
 			break;
-			//주문 눌렸을때
-		case ID_B_ORDER:
-			lstrcpy(tgcmdserver, "2");
-			lstrcat(tgcmdserver, tgselitemi);
-			GetWindowText(hEdit_OrderCount, tgitemcount, sizeof(tgitemcount));													//아이템주문갯수 문자열에 담기
-			lstrcat(tgcmdserver, tgitemcount);
+			//자리선택화면에서 자리선택버튼 눌렸을때
+		case ID_B_SELSEAT:																																
+			lstrcpy(tgcmdserver, "1");
+			GetWindowText(hEdit_Sn, tgnum, sizeof(tgnum));																				//자리 선택(02등 숫자 2자리 형식으로)
+			lstrcat(tgcmdserver, tgnum);
+			nReturn = send(clientsock, tgcmdserver, sizeof(tgcmdserver), 0);														//서버로 자리선택 커맨드 보내기
+			break;
+		case ID_B_LOGOUT:																																			//로그아웃(로그인 했을때)
+			lstrcpy(tgcmdserver, "");
+			lstrcpy(tgcmdserver, "5ID:");
+			lstrcat(tgcmdserver, userid);
+			lstrcat(tgcmdserver, "PW:");
+			lstrcat(tgcmdserver, userpw);
 			lstrcat(tgcmdserver, "SN:");
 			lstrcat(tgcmdserver, usersn);
-			nReturn = send(clientsock, tgcmdserver, sizeof(tgcmdserver), 0);															//서버로 주문 커맨드 보내기
+			chkendbtn = 1;																																				//로그아웃/탈퇴 수행 했을때로
+			nReturn = send(clientsock, tgcmdserver, sizeof(tgcmdserver), 0);																//서버로 로그아웃 커멘드 보내기
+			pctime = 0;
+			wsprintf(tpctime, "%d", pctime);
+			SetWindowText(hEdit_Timer, tpctime);																										//프로시저의 타이머 에디트에 유저 남은 시간 0으로 출력
+			break;
+		case ID_B_DELETE:																																			//탈퇴 수행(로그인 했을때)
+			lstrcpy(tgcmdserver, "");
+			lstrcpy(tgcmdserver, "7ID:");
+			lstrcat(tgcmdserver, userid);
+			lstrcat(tgcmdserver, "PW:");
+			lstrcat(tgcmdserver, userpw);
+			lstrcat(tgcmdserver, "SN:");
+			lstrcat(tgcmdserver, usersn);
+			chkendbtn = 1;																																				//로그아웃/탈퇴 수행 했을때로
+			nReturn = send(clientsock, tgcmdserver, sizeof(tgcmdserver), 0);																//서버로 탈퇴 커맨드 보내기
+			pctime = 0;
+			wsprintf(tpctime, "%d", pctime);
+			SetWindowText(hEdit_Timer, tpctime);																										//프로시저의 타이머 에디트에 유저 남은 시간 0으로 출력
 			break;
 		}
 		return 0;
 	case WM_DESTROY:
-		break;
+		PostQuitMessage(0);
+		return 0;
 	}
 	return(DefWindowProc(hWnd, iMessage, wParam, lParam));
 }
+
