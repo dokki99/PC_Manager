@@ -5,7 +5,6 @@
 #define IDB_OPEN                        101
 #define IDR_MENU                        102
 #define IDB_BITMAP1                     103
-#define ID_CONNECT                      40003
 #define ID_DISCONNECT                   40004
 #define ID_E_INFO                       40015
 #define ID_C_INFO                       40016

@@ -149,13 +149,29 @@ TCHAR tpctime[10];																																					//출력하기 위한 문자열
 DWORD WINAPI ThreadFunc(LPVOID Param) {
 	HDC hdc;
 	SOCKET* P = (SOCKET*)Param;
+	TCHAR CODE[3] = "",TEXT[256] = "";
+	int j;
 	for (;;) {
 		lstrcpy(buf, "");
 		nReturn = recv(*P, buf, 1024, 0);
+
 		if (nReturn == 0 || nReturn == SOCKET_ERROR) {
 			continue;
 		}
 		else {
+
+			j = 0;
+			for (int i = 0; i < lstrlen(buf); i++) {
+				if (i > 2) {
+					CODE[i] = buf[i];
+				}
+				else if (i != 3) {
+					TEXT[j++] = buf[i];
+				}
+			}
+			CODE[lstrlen(CODE)] = '\0';
+			TEXT[lstrlen(TEXT)] = '\0';
+
 			//orderbuf를 통해 커맨드가 주문에 관한것인지 판별
 			orderi = 0;
 			lstrcpy(orderbuf, "");
@@ -165,13 +181,13 @@ DWORD WINAPI ThreadFunc(LPVOID Param) {
 			orderbuf[orderi] = '\0';
 			//
 			//자리선택 결과(가능:11/불가:10)
-			if (buf[0] == '1') {
-				if (lstrcmp(buf, TEXT("11")) == 0) {
-					chkseat = 1;																																			//자리선택 체크
-					lstrcpy(usersn, tgnum);																															//자리번호 담기									
-					wsprintf(buf, "%s", "자리사용가능");
-				}
-				else wsprintf(buf, "%s", "자리사용불가");						
+			if (lstrcmp(CODE,"ST") == 0) {
+				chkseat = 1;														//자리선택 체크
+				lstrcpy(usersn, tgnum);															//자리번호 담기									
+				wsprintf(buf, "%s", "자리사용가능");					
+			}
+			else if (lstrcmp(CODE, "SF") == 0) {
+				wsprintf(buf, "%s", "자리사용불가");
 			}
 			//회원가입 결과(가능:31/불가:30)
 			else if (buf[0] == '3') {
@@ -692,7 +708,7 @@ LRESULT CALLBACK Join_Or_UpdateProc(HWND hWnd, UINT iMessage, WPARAM wParam, LPA
 			GetWindowText(hEdit_Pn,  tgPn, sizeof(tgPn));					
 			GetWindowText(hEdit_Addr, tgAddr, sizeof(tgAddr));		
 			GetWindowText(hEdit_Birth, tgBirth, sizeof(tgBirth));		
-			lstrcpy(tgcmdserver, "3ID:");
+			lstrcpy(tgcmdserver, "JR-ID:");
 			lstrcat(tgcmdserver, tgId);
 			lstrcat(tgcmdserver, "PW:");
 			lstrcat(tgcmdserver, tgPw);
@@ -812,7 +828,7 @@ LRESULT CALLBACK SelSeatProc(HWND hWnd, UINT iMessage, WPARAM wParam, LPARAM lPa
 		{
 			//자리선택 눌렸을때
 		case ID_B_SELSEAT:					
-			lstrcpy(tgcmdserver, "1");
+			lstrcpy(tgcmdserver, "SS-");
 			GetWindowText(hEdit_Sn,tgnum, sizeof(tgnum));																				//자리 선택(02등 숫자 2자리 형식으로)
 			lstrcat(tgcmdserver, tgnum);
 			nReturn = send(clientsock, tgcmdserver, sizeof(tgcmdserver), 0);														//서버로 자리선택 커맨드 보내기
