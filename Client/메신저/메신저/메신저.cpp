@@ -79,6 +79,8 @@ TCHAR loginmsg[200];							//로그인
 TCHAR logoutmsg[200];						//로그아웃
 TCHAR updatemsg[200];						//수정
 TCHAR deletemsg[200];						//삭제
+
+TCHAR returnsnmsg[200];
 //
 //커멘드에서 꺼낸 정보 저장하는 문자열
 TCHAR tgSn[20];									//자리번호
@@ -107,6 +109,9 @@ TCHAR seatnum[10];							//버퍼에서 자리번호 꺼내기
 int seati = 0;											//인덱스
 int seatn;												//자리번호(숫자)
 
+//커맨드가 주문일때 아이디 꺼내는 아이디 문자열의 인덱스
+int tgIdi = 0;
+
 
 //중요!!!!!!!!!!! 클라이언트와 커맨드 주고 받는 방법이므로 참고하여 그대로 이용하기 (피시방주문시스템.txt 필수 참고)
 //DWORD WINAPI ClientThreadFunc(LPVOID):수신스레드(요청 판별하고 처리해주기)
@@ -132,7 +137,7 @@ DWORD WINAPI ClientThreadFunc(LPVOID Param) {
 			//lstrcpy(seatmsg, "10");
 			nReturn = send(clientsock,seatmsg, sizeof(seatmsg), 0);																	//클라이언트에 자리요청 결과 보내기
 		}
-		//주문요청(상품,수량,자리 꺼내서 판별하기 (가능:2상품번호(1,2,3)1/불가:2상품번호(1,2,3)0))
+		//주문요청(상품,수량,ID 꺼내서 판별하기 (가능:2상품번호(1,2,3)1/불가:2상품번호(1,2,3)0))
 		else if (buf[0] == '2') {							
 			itemni = 0;
 			itemn[itemni++] = buf[1];
@@ -142,10 +147,10 @@ DWORD WINAPI ClientThreadFunc(LPVOID Param) {
 			}
 			itemcount[ici] = '\0';
 			itemcountn = atoi(itemcount);																											//주문수량 받기
-			for (i = 8; i < 10; i++) {
-				seatnum[seati++] = buf[i];
-			}
-			seatnum[seati] = '\0';																														//자리 받기
+			for (i = 8; i < lstrlen(buf); i++) {
+				tgId[tgIdi++] = buf[i];
+			}																													
+			tgId[tgIdi] = '\0';																															//아이디 받기
 			lstrcpy(ordermsg, "2");
 			lstrcat(ordermsg, itemn);
 			lstrcat(ordermsg, "1");																														
@@ -421,6 +426,33 @@ DWORD WINAPI ClientThreadFunc(LPVOID Param) {
 			//lstrcpy(deletemsg, "70");		
 			nReturn = send(clientsock, deletemsg, sizeof(deletemsg), 0);															//탈퇴 결과 보내기
 		}
+		//자리반납하기(자리번호 꺼내고 반납하기((가능:81/불가:80))
+		else if (buf[0] == '8') {
+			i = 1;																																					//정보를 담는 시작점
+			turn = -1;																																			//순서대로 정보 받기 위해 제어
+			///커맨드에서 여러 정보들을 빼내는 프로세스
+			while (buf[i] != '\0') {
+				infoi = 0;
+				if (buf[i] == ':') {																															///각 정보를 담는 시작 인덱스로 이동
+					ini = i + 1;
+					turn++;
+				}
+				if (turn == 0) {
+					while (buf[ini] != '\0') {																											///마지막까지 받기
+						info[infoi++] = buf[ini++];
+					}
+					info[infoi] = '\0';
+					lstrcpy(tgSn, info);																													//*SN(자리번호) 꺼내기
+					turn = 0;
+					break;
+				}
+				i++;
+			}
+			lstrcpy(returnsnmsg, "81");
+			//lstrcpy(returnsnmsg, "80");		
+			nReturn = send(clientsock, returnsnmsg, sizeof(returnsnmsg), 0);															//자리반납 결과 보내기
+		}
+
 		//수신한 모든 메시지 에디트박스에 띄우기
 			sprintf_s(strTemp, "수신한 메시지:%s : %d", buf, clientsock);	
 			hChatEdit = GetDlgItem(hWndDlg, IDC_CHATSERVERLIST);
