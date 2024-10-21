@@ -128,10 +128,25 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="Customer.cpp" />
+    <ClCompile Include="DB.cpp" />
+    <ClCompile Include="Employee.cpp" />
     <ClCompile Include="main.cpp" />
+    <ClCompile Include="Revenue.cpp" />
+    <ClCompile Include="Socket.cpp" />
+    <ClCompile Include="Stock.cpp" />
+    <ClCompile Include="Work.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="Common.h" />
+    <ClInclude Include="Customer.h" />
+    <ClInclude Include="DB.h" />
+    <ClInclude Include="Employee.h" />
     <ClInclude Include="resource.h" />
+    <ClInclude Include="Revenue.h" />
+    <ClInclude Include="Socket.h" />
+    <ClInclude Include="Stock.h" />
+    <ClInclude Include="Work.h" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="Server.rc" />
