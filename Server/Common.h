@@ -4,7 +4,6 @@
 #include <commctrl.h>
 #include <stdio.h>
 #include "resource.h"
-
 //고객 정보 구조체
 typedef struct Client_Information {
 	TCHAR Name[21];			//이름
