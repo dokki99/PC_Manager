@@ -2,6 +2,13 @@
 // Microsoft Visual C++에서 생성한 포함 파일입니다.
 // 메신저.rc에서 사용되고 있습니다.
 //
+#define ID_M_ORDER 170
+#define ID_M_LOGIN 100
+#define ID_M_SELSEAT 101
+#define ID_M_JOIN_OR_UPDATE 107
+#define ID_M_CONNECT 105
+#define ID_M_DISCONNECT 106
+
 #define ID_B_LOGOUT 102	//프로시저의 나가기 버튼 식별자
 #define ID_B_DELETE 103		//프로시저의 탈퇴 버튼 식별자
 #define ID_E_TIMER 104		//프로시저의 타이머 에디트 식별자
@@ -35,6 +42,28 @@
 #define ID_S_TIMER 138				//프로시저의 타이머 스태틱 식별자
 #define ID_B_GO_JOIN_OR_UPDATE 140	//로그인의 가입 및 수정 버튼
 #define ID_B_GO_ORDER 141						//사용화면의 주문가기 버튼
+
+#define ID_B_SEATNUM0 142
+#define ID_B_SEATNUM1 143
+#define ID_B_SEATNUM2 144
+#define ID_B_SEATNUM3 145
+#define ID_B_SEATNUM4 146
+#define ID_B_SEATNUM5 147
+#define ID_B_SEATNUM6 148
+#define ID_B_SEATNUM7 149
+#define ID_B_SEATNUM8 150
+#define ID_B_SEATNUM9 151
+
+#define ID_B_ORDERCOUNT0 152
+#define ID_B_ORDERCOUNT1 153
+#define ID_B_ORDERCOUNT2 154
+#define ID_B_ORDERCOUNT3 155
+#define ID_B_ORDERCOUNT4 156
+#define ID_B_ORDERCOUNT5 157
+#define ID_B_ORDERCOUNT6 158
+#define ID_B_ORDERCOUNT7 159
+#define ID_B_ORDERCOUNT8 160
+#define ID_B_ORDERCOUNT9 161
 
 // Next default values for new objects
 // 
