@@ -129,10 +129,19 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="Request.cpp" />
+    <ClCompile Include="Screen.cpp" />
+    <ClCompile Include="Socket.cpp" />
+    <ClCompile Include="Timer.cpp" />
     <ClCompile Include="메신저클라이언트.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="Common.h" />
+    <ClInclude Include="Request.h" />
     <ClInclude Include="resource.h" />
+    <ClInclude Include="Screen.h" />
+    <ClInclude Include="Socket.h" />
+    <ClInclude Include="Timer.h" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="메신저.rc" />
