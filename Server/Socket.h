@@ -1,15 +1,13 @@
 #ifndef __SOCKET__
 #define __SOCKET__
 #include "Common.h"
+
 // 소켓 정보 구조체
 typedef struct Client_Socket {
 	TCHAR ID[128];
 	SOCKET Client_Sock;
 	struct Client_Socket* link;
 }CS;
-
-
-
 
 // 소켓관련 함수/////////////////////////////////////////////
 
