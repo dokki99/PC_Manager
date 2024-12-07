@@ -7,4 +7,5 @@ void RequestUpdate();
 void RequestSelSeat();
 void RequestLogout();
 void RequestDelete();
+BOOL ChkStringInfo(TCHAR*);
 #endif

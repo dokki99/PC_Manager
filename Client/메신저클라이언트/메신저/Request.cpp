@@ -76,6 +76,16 @@ extern BOOL returnsn;																																						//자리반납수행
 
 //자리선택으로 보내는 변수
 extern BOOL gohome;
+
+//문자열 정보 ':' 들어가는지 체크하기
+BOOL ChkStringInfo(TCHAR* str) {
+	int i = 0;
+	for (i = 0; i < lstrlen(str); i++) {
+		if (str[i] == ':')return 1;
+	}
+	return 0;
+}
+
 //void RequestLogin():로그인신청
 void RequestLogin() {
 	returnsn = 0;																																				//자리반납 동작 끄기
@@ -104,8 +114,8 @@ void RequestOrder() {
 	lstrcat(tgcmdserver, tgId);
 	nReturn = send(clientsock, tgcmdserver, sizeof(tgcmdserver), 0);															//서버로 주문 커맨드 보내기
 
-	lstrcpy(tgitemcount, "");																															//주문수량 초기화
 	ocbtncount = 0;																																		//주문수량 버튼 횟수 초기화
+	SetWindowText(hEdit_OrderCount, "");
 }
 //void RequestJoin():가입신청
 void RequestJoin() {
@@ -142,12 +152,12 @@ void RequestJoin() {
 void RequestUpdate() {
 	//커맨드,계정 정보 문자열 빈칸으로 초기화
 	lstrcpy(tgcmdserver, "");																																	//커맨드
-	lstrcpy(tgId, "");																																				//아이디
-	lstrcpy(tgName, "");																																			//이름
-	lstrcpy(tgPw, "");																																				//비번
-	lstrcpy(tgPn, "");																																				//전화번호
-	lstrcpy(tgAddr, "");																																			//주소
-	lstrcpy(tgBirth, "");																																			//생일
+	SetWindowText(hEdit_Id, tgId);
+	SetWindowText(hEdit_Name, tgName);
+	SetWindowText(hEdit_Pw, tgPw);
+	SetWindowText(hEdit_Pn, tgPn);
+	SetWindowText(hEdit_Addr, tgAddr);
+	SetWindowText(hEdit_Birth, tgBirth);
 	//계정 정보 에디트에서 정보 문자열에 담기
 	GetWindowText(hEdit_Id, tgId, sizeof(tgId));
 	GetWindowText(hEdit_Name, tgName, sizeof(tgName));
@@ -176,7 +186,6 @@ void RequestSelSeat() {
 	lstrcat(tgcmdserver, tgnum);
 	nReturn = send(clientsock, tgcmdserver, sizeof(tgcmdserver), 0);														//서버로 자리선택 커맨드 보내기
 
-	lstrcpy(tgnum, "");																																//자리번호 초기화
 	snbtncount = 0;																																		//자리번호버튼 횟수 초기화
 }
 //void RequestLogout():로그아웃신청
@@ -188,6 +197,8 @@ void RequestLogout() {
 	lstrcat(tgcmdserver, userpw);
 	lstrcat(tgcmdserver, "SN:");
 	lstrcat(tgcmdserver, usersn);
+	lstrcat(tgcmdserver, ":");
+	lstrcat(tgcmdserver, tpctime);																														//남은시간 보내기
 	chkendbtn = 1;																																				//로그아웃/탈퇴 수행 했을때로
 	nReturn = send(clientsock, tgcmdserver, sizeof(tgcmdserver), 0);																//서버로 로그아웃 커멘드 보내기
 	pctime = 0;
