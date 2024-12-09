@@ -1,6 +1,6 @@
 #ifndef __COMMON__
 #define __COMMON__
-#include <Windows.h>
+#include <windows.h>
 #include <stdio.h>
 #include <CommCtrl.h>
 #include <sql.h>
