@@ -83,6 +83,7 @@ TCHAR deletemsg[200];						//삭제
 TCHAR returnsnmsg[200];
 //
 //커멘드에서 꺼낸 정보 저장하는 문자열
+TCHAR tgPctime[10];							//남은시간
 TCHAR tgSn[20];									//자리번호
 TCHAR tgId[50];									//아이디
 TCHAR tgPw[50];									//비번
@@ -93,6 +94,7 @@ TCHAR tgBirth[50];								//생일
 TCHAR info[200];								//각 정보
 //
 //커맨드가 여러 정보가 있을때 꺼내기 위한 변수들
+int infotrue;											//각 정보를 문자열에 담기
 int turn;												//각 순서에 순서 제어
 int infoi;												//정보의 인덱스
 int ini;													//버퍼(메세지)의 인덱스
@@ -132,6 +134,7 @@ DWORD WINAPI ClientThreadFunc(LPVOID Param) {
 			seatnum[seati] = '\0';																														//자리번호 담기
 			seatn = atoi(seatnum);
 			seati = 0;
+			//MessageBox(hWndDlg, seatnum, "seatnum", MB_OK);
 			//좌석번호체크
 			lstrcpy(seatmsg, "11");
 			//lstrcpy(seatmsg, "10");
@@ -147,10 +150,12 @@ DWORD WINAPI ClientThreadFunc(LPVOID Param) {
 			}
 			itemcount[ici] = '\0';
 			itemcountn = atoi(itemcount);																											//주문수량 받기
-			for (i = 8; i < lstrlen(buf); i++) {
+			tgIdi = 0;
+			for (i = 7; i < lstrlen(buf); i++) {
 				tgId[tgIdi++] = buf[i];
 			}																													
 			tgId[tgIdi] = '\0';																															//아이디 받기
+			//MessageBox(hWndDlg, tgId, "tgid", MB_OK);
 			lstrcpy(ordermsg, "2");
 			lstrcat(ordermsg, itemn);
 			lstrcat(ordermsg, "1");																														
@@ -167,54 +172,60 @@ DWORD WINAPI ClientThreadFunc(LPVOID Param) {
 				if (buf[i] == ':') {																															///각 정보를 담는 시작 인덱스로 이동
 					ini = i + 1;
 					turn++;
+					infotrue = 0;
 				}
-				if (turn == 0) {																						
+				if (turn == 0&&infotrue==0) {																						
 					while (buf[ini] != ':' && buf[ini] != '\0') {																					///":"만날때까지 받기
 						info[infoi++] = buf[ini++];
 					}
 					if (infoi >= 2) infoi -= 2;																											///다음 요소 커멘드(PW,NAME...) 숫자만큼 빼기
 					info[infoi] = '\0';
 					lstrcpy(tgId, info);																													//*아이디
+					infotrue = 1;
 				}
-				else if (turn == 1) {									
+				else if (turn == 1&&infotrue==0) {									
 					while (buf[ini] != ':' && buf[ini] != '\0') {					
 						info[infoi++] = buf[ini++];
 					}
 					if (infoi >= 4) infoi -= 4;					
 					info[infoi] = '\0';
 					lstrcpy(tgPw, info);																													//*비번
+					infotrue = 1;
 				}
-				else if (turn == 2) {									
+				else if (turn == 2&&infotrue==0) {									
 					while (buf[ini] != ':' && buf[ini] != '\0') {				
 						info[infoi++] = buf[ini++];
 					}
 					if (infoi >= 2) infoi -= 2;				
 					info[infoi] = '\0';
 					lstrcpy(tgName, info);																												//*이름 담기
+					infotrue = 1;
 				}
-				else if (turn == 3) {									
+				else if (turn == 3&&infotrue==0) {									
 					while (buf[ini] != ':' && buf[ini] != '\0') {			
 						info[infoi++] = buf[ini++];
 					}
 					if (infoi >= 4) infoi -= 4;				
 					info[infoi] = '\0';
 					lstrcpy(tgPn, info);																													//*비번 담기
+					infotrue = 1;
 				}
-				else if (turn == 4) {								
+				else if (turn == 4&&infotrue==0) {								
 					while (buf[ini] != ':' && buf[ini] != '\0') {				
 						info[infoi++] = buf[ini++];
 					}
 					if (infoi >= 5) infoi -= 5;				
 					info[infoi] = '\0';
 					lstrcpy(tgAddr, info);																												//*주소 담기
+					infotrue = 1;
 				}
-				else if (turn == 5) {									
+				else if (turn == 5&&infotrue==0) {									
 					while (buf[ini] != '\0') {																											///마지막까지 담기
 						info[infoi++] = buf[ini++];
 					}
 					info[infoi] = '\0';
 					lstrcpy(tgBirth, info);																												//*생일 담기
-					turn = 0;
+					turn = -1;
 					break;
 				}
 				i++;
@@ -233,22 +244,24 @@ DWORD WINAPI ClientThreadFunc(LPVOID Param) {
 				if (buf[i] == ':') {																															///각 정보를 담는 시작 인덱스로 이동
 					ini = i + 1;
 					turn++;
+					infotrue = 0;
 				}
-				if (turn == 0) {
+				if (turn == 0&&infotrue==0) {
 					while (buf[ini] != ':' && buf[ini] != '\0') {																					///":"만날때까지 받기
 						info[infoi++] = buf[ini++];
 					}
 					if (infoi >= 2) infoi -= 2;																											///다음 요소 커멘드(PW,NAME...) 숫자만큼 빼기
 					info[infoi] = '\0';
 					lstrcpy(tgId, info);																													//*ID꺼내기
+					infotrue = 1;
 				}
-				else if (turn == 1) {
+				else if (turn == 1&&infotrue==0) {
 					while (buf[ini] != '\0') {																											///마지막까지 받기
 						info[infoi++] = buf[ini++];
 					}
 					info[infoi] = '\0';
 					lstrcpy(tgPw, info);																													//*PW꺼내기
-					turn = 0;
+					turn = -1;
 					break;
 				}
 				i++;
@@ -256,14 +269,14 @@ DWORD WINAPI ClientThreadFunc(LPVOID Param) {
 			//로그인한 유저의 정보 샘플들(DB에서 아이디와 비번으로 정보 가져오기)
 			lstrcpy(loginmsg, "41");
 			//lstrcpy(loginmsg, "40");
-			lstrcpy(usertime, "10");			//남은 시간
+			lstrcpy(usertime, "100");			//남은 시간
 			//lstrcpy(usertime, "00");	
 			lstrcpy(username, "name01");				
 			lstrcpy(userpn, "pn01");
 			lstrcpy(useraddr, "addr01");
 			lstrcpy(userbirth, "birth01");
 			lstrcat(loginmsg, usertime);
-			lstrcat(loginmsg, "NAME:");
+			lstrcat(loginmsg, ":NAME:");
 			lstrcat(loginmsg, username);
 			lstrcat(loginmsg, "PN:");
 			lstrcat(loginmsg, userpn);
@@ -283,38 +296,49 @@ DWORD WINAPI ClientThreadFunc(LPVOID Param) {
 				if (buf[i] == ':') {																															///각 정보를 담는 시작 인덱스로 이동
 					ini = i + 1;
 					turn++;
+					infotrue = 0;
 				}
-				if (turn == 0) {
+				if (turn == 0&&infotrue==0) {
 					while (buf[ini] != ':' && buf[ini] != '\0') {																					///":"만날때까지 받기
 						info[infoi++] = buf[ini++];
 					}
 					if (infoi >= 2) infoi -= 2;																											///다음 요소 커멘드(PW,NAME...) 숫자만큼 빼기
 					info[infoi] = '\0';
 					lstrcpy(tgId, info);																													//*ID꺼내기
+					infotrue = 1;
 				}
-				else if (turn == 1) {
+				else if (turn == 1&&infotrue==0) {
 					while (buf[ini] != ':' && buf[ini] != '\0') {
 						info[infoi++] = buf[ini++];
 					}
 					if (infoi >= 2) infoi -= 2;
 					info[infoi] = '\0';
 					lstrcpy(tgPw, info);																													//*PW꺼내기
+					infotrue = 1;
 				}
-				else if (turn == 2) {
+				else if (turn == 2 && infotrue == 0) {
+					while (buf[ini] != ':' && buf[ini] != '\0') {
+						info[infoi++] = buf[ini++];
+					}
+					info[infoi] = '\0';
+					lstrcpy(tgSn, info);																													//*자리꺼내기
+					infotrue = 1;
+				}
+				else if (turn == 3&&infotrue==0) {
 					while (buf[ini] != '\0') {																											///마지막까지 받기
 						info[infoi++] = buf[ini++];
 					}
 					info[infoi] = '\0';
-					lstrcpy(tgSn, info);																													//*자리 꺼내기
-					turn = 0;
+					lstrcpy(tgPctime, info);																													//*자리 꺼내기
+					turn = -1;
 					break;
 				}
 				i++;
 			}
-
-			lstrcpy(logoutmsg, "51");
-			//lstrcpy(logoutmsg, "50");		
-			nReturn = send(clientsock,logoutmsg, sizeof(logoutmsg), 0);															//로그아웃 결과 보내기
+			//MessageBox(hWndDlg, tgPctime, "tgpctime", MB_OK);
+			//lstrcpy(logoutmsg, "51");
+			////lstrcpy(logoutmsg, "50");		
+			//nReturn = send(clientsock,logoutmsg, sizeof(logoutmsg), 0);															//로그아웃 결과 보내기
 		}
 		//수정 처리(여러 정보들을 빼내고 저장하기(가능:61/불가:60))
 		else if (buf[0] == '6') {						
@@ -326,54 +350,60 @@ DWORD WINAPI ClientThreadFunc(LPVOID Param) {
 				if (buf[i] == ':') {																															///각 정보를 담는 시작 인덱스로 이동
 					ini = i + 1;
 					turn++;
+					infotrue = 0;
 				}
-				if (turn == 0) {
+				if (turn == 0&&infotrue==0) {
 					while (buf[ini] != ':' && buf[ini] != '\0') {																					///":"만날때까지 받기
 						info[infoi++] = buf[ini++];
 					}
 					if (infoi >= 2) infoi -= 2;																											///다음 요소 커멘드(PW,NAME...) 숫자만큼 빼기
 					info[infoi] = '\0';
 					lstrcpy(tgId, info);																													//*ID꺼내기
+					infotrue = 1;
 				}
-				else if (turn == 1) {
+				else if (turn == 1&&infotrue==0) {
 					while (buf[ini] != ':' && buf[ini] != '\0') {
 						info[infoi++] = buf[ini++];
 					}
 					if (infoi >= 4) infoi -= 4;
 					info[infoi] = '\0';
 					lstrcpy(tgPw, info);																													//*PW꺼내기
+					infotrue = 1;
 				}
-				else if (turn == 2) {
+				else if (turn == 2&&infotrue==0) {
 					while (buf[ini] != ':' && buf[ini] != '\0') {
 						info[infoi++] = buf[ini++];
 					}
 					if (infoi >= 2) infoi -= 2;
 					info[infoi] = '\0';
 					lstrcpy(tgName, info);																												//*NAME꺼내기
+					infotrue = 1;
 				}
-				else if (turn == 3) {
+				else if (turn == 3&&infotrue==0) {
 					while (buf[ini] != ':' && buf[ini] != '\0') {
 						info[infoi++] = buf[ini++];
 					}
 					if (infoi >= 4) infoi -= 4;
 					info[infoi] = '\0';
 					lstrcpy(tgPn, info);																													//*PN꺼내기
+					infotrue = 1;
 				}
-				else if (turn == 4) {
+				else if (turn == 4&&infotrue==0) {
 					while (buf[ini] != ':' && buf[ini] != '\0') {
 						info[infoi++] = buf[ini++];
 					}
 					if (infoi >= 5) infoi -= 5;
 					info[infoi] = '\0';
 					lstrcpy(tgAddr, info);																												//*ADDR꺼내기
+					infotrue = 1;
 				}
-				else if (turn == 5) {
+				else if (turn == 5&&infotrue==0) {
 					while (buf[ini] != '\0') {																											///마지막까지 받기
 						info[infoi++] = buf[ini++];
 					}
 					info[infoi] = '\0';
 					lstrcpy(tgBirth, info);																												//*BIRTH꺼내기
-					turn = 0;
+					turn = -1;
 					break;
 				}
 				i++;
@@ -393,30 +423,33 @@ DWORD WINAPI ClientThreadFunc(LPVOID Param) {
 				if (buf[i] == ':') {																															///각 정보를 담는 시작 인덱스로 이동
 					ini = i + 1;
 					turn++;
+					infotrue = 0;
 				}
-				if (turn == 0) {
+				if (turn == 0&&infotrue==0) {
 					while (buf[ini] != ':' && buf[ini] != '\0') {																					///":"만날때까지 받기
 						info[infoi++] = buf[ini++];
 					}
 					if (infoi >= 2) infoi -= 2;																											///다음 요소 커멘드(PW,NAME...) 숫자만큼 빼기
 					info[infoi] = '\0';
 					lstrcpy(tgId, info);																													//*ID꺼내기
+					infotrue = 1;
 				}
-				else if (turn == 1) {
+				else if (turn == 1&&infotrue==0) {
 					while (buf[ini] != ':' && buf[ini] != '\0') {
 						info[infoi++] = buf[ini++];
 					}
 					if (infoi >= 2) infoi -= 2;
 					info[infoi] = '\0';
 					lstrcpy(tgPw, info);																													//*PW꺼내기
+					infotrue = 1;
 				}
-				else if (turn == 2) {
+				else if (turn == 2&&infotrue==0) {
 					while (buf[ini] != '\0') {																											///마지막까지 받기
 						info[infoi++] = buf[ini++];				
 					}
 					info[infoi] = '\0';
 					lstrcpy(tgSn, info);																													//*SN(자리번호) 꺼내기
-					turn = 0;
+					turn = -1;
 					break;
 				}
 				i++;
@@ -436,21 +469,22 @@ DWORD WINAPI ClientThreadFunc(LPVOID Param) {
 				if (buf[i] == ':') {																															///각 정보를 담는 시작 인덱스로 이동
 					ini = i + 1;
 					turn++;
+					infotrue = 0;
 				}
-				if (turn == 0) {
+				if (turn == 0&&infotrue==0) {
 					while (buf[ini] != '\0') {																											///마지막까지 받기
 						info[infoi++] = buf[ini++];
 					}
 					info[infoi] = '\0';
 					lstrcpy(tgSn, info);																													//*SN(자리번호) 꺼내기
-					turn = 0;
+					turn = -1;
 					break;
 				}
 				i++;
 			}
-			lstrcpy(returnsnmsg, "81");
-			//lstrcpy(returnsnmsg, "80");		
-			nReturn = send(clientsock, returnsnmsg, sizeof(returnsnmsg), 0);															//자리반납 결과 보내기
+			//lstrcpy(returnsnmsg, "81");
+			////lstrcpy(returnsnmsg, "80");		
+			//nReturn = send(clientsock, returnsnmsg, sizeof(returnsnmsg), 0);															//자리반납 결과 보내기
 		}
 
 		//수신한 모든 메시지 에디트박스에 띄우기

@@ -9,12 +9,7 @@ extern HWND hWndMain;
 ////IP와 포트번호 설정
 extern const char g_szlpAddress[17] = "127.0.0.1";
 extern const unsigned short g_uPort = 7878;
-//TCHAR tgIp[17] = "127.0.0.1", tgPort[10] = "7878";																									//IP와 PORT번호
 extern TCHAR tgIp[17];
-TCHAR testlstrcpy[10];
-lstrcpy(testlstrcpy, L"~~~~");
-//strcpy(sockettest, "11");
-//lstrcpy(tgIp, "127.0.0.1");
 extern TCHAR tgPort[10];
 extern TCHAR tgId[10], tgName[10], tgPw[10], tgPn[10], tgAddr[10], tgBirth[10];																//아이디,이름,비번,전화번호,주소,생일 문자열 변수들
 extern int nip, nport;
@@ -35,18 +30,19 @@ extern int nReturn;																																								//통신 결과
 extern WSADATA wsadata;																																				//소켓 연결
 extern SOCKET clientsock;																																					//소켓번호 담기
 extern sockaddr_in addr_client;
-extern int addrlen_clt = sizeof(sockaddr);
+extern int addrlen_clt;
 ///서버로부터 받는 메세지
 extern char buf[1024];																																						//메시지 문자열																						
 extern char strTemp[1024];																																				//메세지를 채팅창에 수신한 메세지로 변환
 ///
 
+extern int infotrue;																																							//각 정보 담기 제어
 ////상황별 주요변수
 //커멘드에 여러 정보가 있을때
-extern int turn = 0;																																								//유저의 정보를 순서대로 가져오게 하는 순서 제어
+extern int turn;																																								//유저의 정보를 순서대로 가져오게 하는 순서 제어
 extern int ini;																																										//각 정보마다 버퍼(메세지)의 인덱스
 extern TCHAR info[200];																																					//요소를 뽑는 문자열
-extern int infoi = 0;																																								//요소를 뽑는 문자열의 인덱스
+extern int infoi;																																								//요소를 뽑는 문자열의 인덱스
 //
 //로그인상황의  유저의 변수들
 extern TCHAR userid[10];																																					//아이디
@@ -56,6 +52,8 @@ extern int pctimei;																																								//시간 인덱스
 extern int pctime;																																								//로그인된 유저의 시간
 //
 ///주문상황의 변수들
+//주문시간
+extern int orderpctime;																																						//주문한  시간으로 기존에 병합
 //아이템주문갯수
 extern TCHAR tgselitemi[10];																																				//인덱스를 문자열로 변환
 extern int selitemi;																																								//리스트 박스의 인덱스
@@ -79,7 +77,7 @@ extern TCHAR tgnum[10];																																					//신청하는 자리번호 
 
 //커맨드가 주문인지 판별
 extern TCHAR orderbuf[10];																																				//주문요소정보(미리 메세지가 주문인지 판별)
-extern int orderi = 0;																																							//주문요소정보 인덱스
+extern int orderi;																																							//주문요소정보 인덱스
 //
 
 //유저시간
@@ -139,25 +137,18 @@ DWORD WINAPI ThreadFunc(LPVOID Param) {
 			CODE[lstrlen(CODE)] = '\0';
 			TEXT[lstrlen(TEXT)] = '\0';
 
-			//orderbuf를 통해 커맨드가 주문에 관한것인지 판별
-			orderi = 0;
-			lstrcpy(orderbuf, "");
-			for (int i = 0; i < 3; i++) {
-				orderbuf[orderi++] = buf[i];
-			}
-			orderbuf[orderi] = '\0';
-			//
 			//자리선택 결과(가능:11/불가:10)
 			if (buf[0] == '1') {
 				if (lstrcmp(buf, TEXT("11")) == 0) {
-					returnsntime = 100000000;																													//자리반납타이머시간 초기화
+					returnsntime = 100000;																													//자리반납타이머시간 초기화
 					returnsn = 1;																																			//자리반납동작
 					chkseat = 1;																																			//자리선택 체크
-					SetTimer(hWndMain, 0, 100, NULL);																									//자동으로 화면모드 설정 타이머
-					SetTimer(hWndMain, 3, 1000000, NULL);																							//자리반납타이머
+					//SetTimer(hWndMain, 0, 100, NULL);																									//자동으로 화면모드 설정 타이머
+					//SetTimer(hWndMain, 3, 1000000, NULL);																							//자리반납타이머
 					//SendMessage(hWndMain, WM_TIMER, 0, 0);
 					//SendMessage(hWndMain, WM_TIMER, 3, 0);
-					lstrcpy(usersn, tgnum);																															//자리번호 담기									
+					lstrcpy(usersn, tgnum);																															//자리번호 담기		
+					lstrcpy(tgnum, "");																																//자리번호 초기화
 					wsprintf(buf, "%s", "자리사용가능");
 				}
 				else wsprintf(buf, "%s", "자리사용불가");
@@ -173,19 +164,21 @@ DWORD WINAPI ThreadFunc(LPVOID Param) {
 			//로그인 결과(가능:41NAME,PN,ADDR,BIRTH/불가:4100 또는 40)
 			else if (buf[0] == '4') {
 				if (buf[1] == '1') {
-					//남은시간 담기
-					pctimei = 0;
-					for (int i = 2; i < 4; i++) {
-						pctimebuf[pctimei++] = buf[i];
+					infoi = 0;
+					ini = 2;
+					while (buf[ini] != ':' && buf[ini] != '\0') {																		///":"전까지 담기
+						info[infoi++] = buf[ini++];
 					}
-					pctimebuf[pctimei] = '\0';
+					info[infoi] = '\0';
+					lstrcpy(pctimebuf, info);
+					//MessageBox(hWndMain, pctimebuf, "pctimebuf", MB_OK);
 					pctime = atoi(pctimebuf);
 					//
 					//가능할때 입력한 아이디 비번을 저장하고 이름,전화번호,주소,생일들을 담기
 					if (pctime >= 0) {
 						lstrcpy(userid, tgId);																											//계정 아이디,비번 담기
 						lstrcpy(userpw, tgPw);
-						i = 4;																																		//로그인 커맨드의 가져올 정보의  시작점
+						i = ini+1;																																		//로그인 커맨드의 가져올 정보의  시작점
 						turn = -1;																																//가져올 정보를 순서대로 가져오게 제어
 						///로그인 커멘드에서 나머지 정보를 담는 프로세스(NAME-PN-ADDR-BIRTH순)
 						while (buf[i] != '\0') {
@@ -193,43 +186,46 @@ DWORD WINAPI ThreadFunc(LPVOID Param) {
 							if (buf[i] == ':') {																												///각 정보의 시작점으로 이동
 								ini = i + 1;
 								turn++;
+								infotrue = 0;
 							}
-							if (turn == 0) {
+							if (turn == 0&&infotrue==0) {
 								while (buf[ini] != ':' && buf[ini] != '\0') {																		///":"전까지 담기
 									info[infoi++] = buf[ini++];
 								}
 								if (infoi >= 2) infoi -= 2;																								///다음 정보 커맨드(PW,NAME..) 길이 만큼 빼기
 								info[infoi] = '\0';
 								lstrcpy(tgName, info);
+								infotrue = 1;
 							}
-							else if (turn == 1) {
+							else if (turn == 1&&infotrue==0) {
 								while (buf[ini] != ':' && buf[ini] != '\0') {
 									info[infoi++] = buf[ini++];
 								}
 								if (infoi >= 4) infoi -= 4;
 								info[infoi] = '\0';
 								lstrcpy(tgPn, info);
+								infotrue = 1;
 							}
-							else if (turn == 2) {
+							else if (turn == 2&&infotrue==0) {
 								while (buf[ini] != ':' && buf[ini] != '\0') {
 									info[infoi++] = buf[ini++];
 								}
 								if (infoi >= 5) infoi -= 5;
 								info[infoi] = '\0';
 								lstrcpy(tgAddr, info);
+								infotrue = 1;
 							}
-							else if (turn == 3) {
+							else if (turn == 3&&infotrue==0) {
 								while (buf[ini] != '\0') {																									///마지막까지 담기
 									info[infoi++] = buf[ini++];
 								}
 								info[infoi] = '\0';
 								lstrcpy(tgBirth, info);
-								turn = 0;
+								turn = -1;
 								break;
 							}
 							i++;
 						}
-
 						i = 0;
 						wsprintf(tpctime, "%d", pctime);																								//남은시간을 출력하기위해 문자열로
 
@@ -250,7 +246,7 @@ DWORD WINAPI ThreadFunc(LPVOID Param) {
 			else if (buf[0] == '2') {
 				//음료
 				if (buf[1] == '1') {
-					if (lstrcmp(orderbuf, TEXT("211")) == 0) {
+					if (lstrcmp(buf, TEXT("211")) == 0) {
 						chkorder = 1;
 						wsprintf(buf, "%s", "DRINK구입성공");
 					}
@@ -258,7 +254,7 @@ DWORD WINAPI ThreadFunc(LPVOID Param) {
 				}
 				//식품
 				else if (buf[1] == '2') {
-					if (lstrcmp(orderbuf, TEXT("221")) == 0) {
+					if (lstrcmp(buf, TEXT("221")) == 0) {
 						chkorder = 1;
 						wsprintf(buf, "%s", "FOOD구입성공");
 					}
@@ -266,20 +262,16 @@ DWORD WINAPI ThreadFunc(LPVOID Param) {
 				}
 				//PC
 				else if (buf[1] == '3') {
-					if (lstrcmp(orderbuf, TEXT("231")) == 0) {
+					if (lstrcmp(buf, TEXT("231")) == 0) {
 						chkorder = 1;
+						orderpctime = atoi(tgitemcount);
+						pctime += orderpctime;
+						wsprintf(tpctime, "%d", pctime);																								//남은시간을 출력하기위해 문자열로
+						lstrcpy(tgitemcount, "");																											//주문수량 문자열 초기화
 						wsprintf(buf, "%s", "PC구입성공");
 					}
 					else wsprintf(buf, "%s", "PC구입실패");
 				}
-			}
-			//로그아웃 결과(가능:51/불가:50
-			else if (buf[0] == '5') {
-				if (lstrcmp(buf, TEXT("51")) == 0) {
-					lstrcpy(userid, "");
-					wsprintf(buf, "%s", "로그아웃성공");
-				}
-				else 	wsprintf(buf, "%s", "로그아웃실패");
 			}
 			//수정 결과(가능:61/불가:60)
 			else if (buf[0] == '6') {
@@ -296,14 +288,6 @@ DWORD WINAPI ThreadFunc(LPVOID Param) {
 					gohome = 1;																																		//자리 선택가기
 				}
 				else wsprintf(buf, "%s", "탈퇴실패");
-			}
-			//반납 결과(가능:81/불가:80)
-			else if (buf[0] == '8') {
-				if (lstrcmp(buf, TEXT("81")) == 0) {
-					wsprintf(buf, "%s", "반환성공");
-					gohome = 1;																																		//자리 선택가기
-				}
-				else wsprintf(buf, "%s", "반환실패");
 			}
 			//서버로부터 받은 메세지를 메세지박스로 띄우기
 			if (lstrlen(buf) != 0) {

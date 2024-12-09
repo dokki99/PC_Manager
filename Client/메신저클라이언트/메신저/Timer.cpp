@@ -46,7 +46,7 @@ extern BOOL returnsn;																																						//자리반납수행
 //자리선택으로 보내는 변수
 extern BOOL gohome;
 //void UserTimer():유저시간타이머 0이되면 로그아웃 처리 신청
-void UserTimer() {
+void UserTimer(HWND hWnd,WPARAM wParam, LPARAM lParam) {
 	pctime -= 1;
 	wsprintf(tpctime, "%d", pctime);
 	SetWindowText(hEdit_Timer, tpctime);																						//프로시저의 타이머 에디트에 유저 남은 시간 출력
@@ -63,6 +63,7 @@ void UserTimer() {
 		chkendbtn = 1;																															//로그아웃/탈퇴 처리로 
 		chklogin = 0;																																//로그아웃 된 상태로
 		nReturn = send(clientsock, tgcmdserver, sizeof(tgcmdserver), 0);
+		chktimer = 0;																															//타이머 끄는 상태로
 	}
 }
 //void SetUserTimer():유저남은시간타이머 재설정
@@ -77,14 +78,14 @@ void SetUserTimer() {
 }
 //void ReturnSeatTimer():자리반납타이머(로그인버튼 제한시간안에 누르지 않으면 자리반납처리 신청)
 void ReturnSeatTimer() {
-	returnsntime -= 1000000;																											//자리반납시간 줄이기
+	returnsntime -= 100000;																											//자리반납시간 줄이기
 	if (returnsntime <= 0) {																													//제한시간 경과
-		returnsntime = 1000000;																											//자리반납시간 초기화
+		returnsntime = 100000;																											//자리반납시간 초기화
 		returnsn = 0;																															//자리반납동작 끄기
 		lstrcpy(tgcmdserver, "8");
 		lstrcat(tgcmdserver, "SN:");
 		lstrcat(tgcmdserver, tgnum);
 		nReturn = send(clientsock, tgcmdserver, sizeof(tgcmdserver), 0);											//서버로 자리반납 커멘드 보내기
-		MessageBox(hWnd, "제한시간10초 초과로 좌석번호반납됨", "좌석반납", MB_OK);
+		MessageBox(hWnd, "제한시간100초 초과로 좌석번호반납됨", "좌석반납", MB_OK);
 	}
 }

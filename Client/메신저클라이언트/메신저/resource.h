@@ -9,6 +9,8 @@
 #define ID_M_CONNECT 105
 #define ID_M_DISCONNECT 106
 
+#define ID_B_USERUPDATE 172	//유저에서 업데이트하고 다시 유저로 가는 버튼
+#define ID_B_USER_GO_UPDATE 171	//유저의 수정 버튼
 #define ID_B_LOGOUT 102	//프로시저의 나가기 버튼 식별자
 #define ID_B_DELETE 103		//프로시저의 탈퇴 버튼 식별자
 #define ID_E_TIMER 104		//프로시저의 타이머 에디트 식별자
@@ -40,7 +42,7 @@
 #define ID_S_ITEM 135				//주문의 아이템 스태틱 식별자
 #define ID_S_ORDERCOUNT 136	//주문의 아이템주문갯수 스태틱 식별자
 #define ID_S_TIMER 138				//프로시저의 타이머 스태틱 식별자
-#define ID_B_GO_JOIN_OR_UPDATE 140	//로그인의 가입 및 수정 버튼
+#define ID_B_GO_JOIN 140	//로그인의 가입 버튼
 #define ID_B_GO_ORDER 141						//사용화면의 주문가기 버튼
 
 #define ID_B_SEATNUM0 142
