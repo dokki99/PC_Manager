@@ -45,6 +45,12 @@ extern BOOL returnsn;																																						//자리반납수행
 
 //자리선택으로 보내는 변수
 extern BOOL gohome;
+
+//자리반납타이머 셋팅
+void SetReturnSeatTimer() {
+	KillTimer(hWnd, 3);
+	SetTimer(hWnd, 3, 100000, NULL);
+}
 //void UserTimer():유저시간타이머 0이되면 로그아웃 처리 신청
 void UserTimer(HWND hWnd,WPARAM wParam, LPARAM lParam) {
 	pctime -= 1;
@@ -68,6 +74,7 @@ void UserTimer(HWND hWnd,WPARAM wParam, LPARAM lParam) {
 }
 //void SetUserTimer():유저남은시간타이머 재설정
 void SetUserTimer() {
+	SetReturnSeatTimer();																												//자리반납타이머 재설정
 	gohome = 1;
 	KillTimer(hWnd, 1);																														//타이머 끄기
 	chktimer = 0;																																//타이머 끄는 상태로
