@@ -172,7 +172,7 @@ DWORD WINAPI ThreadFunc(LPVOID Param) {
 					info[infoi] = '\0';
 					lstrcpy(pctimebuf, info);
 					//MessageBox(hWndMain, pctimebuf, "pctimebuf", MB_OK);
-					pctime = atoi(pctimebuf);
+					pctime = atoi(pctimebuf);																											//시간 받기
 					//
 					//가능할때 입력한 아이디 비번을 저장하고 이름,전화번호,주소,생일들을 담기
 					if (pctime >= 0) {
@@ -264,7 +264,7 @@ DWORD WINAPI ThreadFunc(LPVOID Param) {
 				else if (buf[1] == '3') {
 					if (lstrcmp(buf, TEXT("231")) == 0) {
 						chkorder = 1;
-						orderpctime = atoi(tgitemcount);
+						//orderpctime = atoi(tgitemcount);
 						pctime += orderpctime;
 						wsprintf(tpctime, "%d", pctime);																								//남은시간을 출력하기위해 문자열로
 						lstrcpy(tgitemcount, "");																											//주문수량 문자열 초기화

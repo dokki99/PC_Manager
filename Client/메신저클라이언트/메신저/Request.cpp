@@ -2,6 +2,9 @@
 #include "Request.h"
 extern TCHAR tgId[10], tgName[10], tgPw[10], tgPn[10], tgAddr[10], tgBirth[10];																//아이디,이름,비번,전화번호,주소,생일 문자열 변수들
 
+//주문 시간
+extern int orderpctime;
+
 //소켓변수
 extern int nReturn;
 
@@ -109,6 +112,7 @@ void RequestOrder() {
 	lstrcpy(tgcmdserver, "2");
 	lstrcat(tgcmdserver, tgselitemi);
 	GetWindowText(hEdit_OrderCount, tgitemcount, sizeof(tgitemcount));													//아이템주문갯수 문자열에 담기
+	orderpctime = atoi(tgitemcount);
 	lstrcat(tgcmdserver, tgitemcount);
 	lstrcat(tgcmdserver, "ID:");																														//입력아이디 문자열에 담기
 	lstrcat(tgcmdserver, tgId);

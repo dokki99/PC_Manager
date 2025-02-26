@@ -1,3 +1,4 @@
+//12/13 자리반납타이머 재설정, 피시상품 주문시 기존 시간과 합치고 로그아웃 시 잔여시간 보내기 
 //12/4 소켓부분 바꿨으니 클라이언트의 메신저 참고 바람
 //메세지크래커까지 완료
 #include<Windowsx.h>
@@ -162,6 +163,7 @@ TCHAR tgitemcount[10] = "";																																	//개수 문자열
 //
 ///
 //상태 체크 변수
+BOOL chkreturnsn = 0;																																					//자리반납여부
 BOOL chkseat = 0;																																							//자리선택
 BOOL chkjoin = 0;																																							//가입
 BOOL chklogin = 0;																																						//로그인
@@ -245,346 +247,6 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT iMessage, WPARAM wParam, LPARAM lParam)
 	default:
 		return DefWindowProc(hWnd, iMessage, wParam, lParam);
 	}
-
-	//switch (iMessage) {
-	//case WM_CREATE:
-	//	hWndMain = hWnd;
-	//	InitCommonControls();
-
-	//	CLIENT_Open();
-	//	
-	//	SelSeat(hWnd,wParam,lParam);
-
-	//	
-	//
-	//	//타이머(로그인 시 수행)
-	//	SetTimer(hWnd, 0, 100, NULL);			//자동으로 화면모드 설정 타이머
-	//	SetTimer(hWnd, 1, 1000, NULL);			//시간 타이머
-	//	SetTimer(hWnd, 2, 1000, NULL);			//시간 타이머 종료하는 타이머
-	//	SetTimer(hWnd, 3, 100000, NULL);	//자리 반납 타이머
-	//	SendMessage(hWnd, WM_TIMER, 3, 0);
-	//	return 0;
-	//case WM_TIMER:
-	//	switch (wParam) {
-	//	case 0:													//자동으로 화면모드 바꾸는 타이머
-	//		if (chkupdate == 1) {										//수정 잘 되었을때
-	//			chkupdate = 0;
-	//			UserUpdateToUser();
-	//		}
-	//		//자리선택화면->로그인화면
-	//		else if (chkseat == 1) {								//자리선택 잘 되었을때
-	//			chkseat = 0;
-	//			if (selwindow != 0)ShowWindow(hButton_SeatNum0, SW_HIDE);																		//자리번호 숨기기
-	//			if (selwindow != 0)ShowWindow(hButton_SeatNum1, SW_HIDE);
-	//			if (selwindow != 0)ShowWindow(hButton_SeatNum2, SW_HIDE);
-	//			if (selwindow != 0)ShowWindow(hButton_SeatNum3, SW_HIDE);
-	//			if (selwindow != 0)ShowWindow(hButton_SeatNum4, SW_HIDE);
-	//			if (selwindow != 0)ShowWindow(hButton_SeatNum5, SW_HIDE);
-	//			if (selwindow != 0)ShowWindow(hButton_SeatNum6, SW_HIDE);
-	//			if (selwindow != 0)ShowWindow(hButton_SeatNum7, SW_HIDE);
-	//			if (selwindow != 0)ShowWindow(hButton_SeatNum8, SW_HIDE);
-	//			if (selwindow != 0)ShowWindow(hButton_SeatNum9, SW_HIDE);
-	//			SelSeatToLogin();
-	//		}
-	//		//로그인화면->사용화면
-	//		else if (chklogin == 1) {					//로그인 잘 되었을 때
-	//			chklogin = 0;
-
-	//			LoginToUser();
-	//		}
-	//		//남은시간 0일때 주문 후 로그인 화면으로/남은시간 있을때 주문 후 사용화면으로
-	//		else if (chkorder == 1) {										//주문 잘 되었을 때
-	//			chkorder = 0;
-
-	//			OrderToLoginOrUser();
-	//		}
-	//		//남은시간 0일때 로그인화면에서 주문화면으로
-	//		else if (chkpctime == 1) {															//남은시간 0일때
-	//			chkpctime = 0;
-	//			selafterorder = 1;																	//남은시간0일때로 설정
-
-	//			LoginToOrder();
-	//		}
-	//		//가입 및 수정화면에서 로그인화면으로
-	//		else if (chkjoin == 1) {										//회원가입 잘 되었을때
-	//			chkjoin = 0;
-
-	//			JoinOrUpdateToLogin();
-	//		}
-	//		//가입 및 수정화면에서 로그인화면으로 
-	//		else if (chkupdate == 1) {										//수정 잘 되었을때
-	//			chkupdate = 0;
-
-	//			JoinOrUpdateToLogin();
-	//		}
-	//		//사용화면(로그아웃/탈퇴)/주문화면/로그인화면(자리반납)에서 자리선택화면으로 
-	//		else if (gohome == 1) {																				//자리선택화면으로 가는 상황
-	//			gohome = 0;
-
-	//			ToSelSeat();
-	//		}
-	//		break;
-	//	case 1:
-	//		if (chktimer == 1) {
-	//			UserTimer(hWnd,wParam,lParam);
-	//			//chktimer = 0;																															//타이머 끄는 상태로
-	//		}
-	//		break;
-	//		//나가기버튼 눌렸을때/남은시간 0일때 남은시간 타이머 종료하고 다시 타이머 만들기(로그인을 계속 받기 위해)
-	//	case 2:
-	//		if (chkendbtn == 1) {
-
-	//			SetUserTimer();
-	//			chkendbtn = 0;
-	//		}
-	//		break;
-	//	case 3:																																					//자리반납타이머
-	//		if (returnsn == 1) {																															//자리반납동작일때
-	//			ReturnSeatTimer();
-	//		}
-	//		break;
-	//	}
-	//	return 0;
-
-	//case WM_COMMAND:
-	//	switch (LOWORD(wParam))
-	//	{
-	//	case ID_B_SEATNUM0:
-	//		if (snbtncount < 2) {
-	//			snbtncount++;
-	//			lstrcat(tgnum, "0");
-	//			SetWindowText(hEdit_Sn, tgnum);
-	//		}
-	//		break;
-	//	case ID_B_SEATNUM1:
-	//		if (snbtncount < 2) {
-	//			snbtncount++;
-	//			lstrcat(tgnum, "1");
-	//			SetWindowText(hEdit_Sn, tgnum);
-	//		}
-	//		break;
-	//	case ID_B_SEATNUM2:
-	//		if (snbtncount < 2) {
-	//			snbtncount++;
-	//			lstrcat(tgnum, "2");
-	//			SetWindowText(hEdit_Sn, tgnum);
-	//		}
-	//		break;
-	//	case ID_B_SEATNUM3:
-	//		if (snbtncount < 2) {
-	//			snbtncount++;
-	//			lstrcat(tgnum, "3");
-	//			SetWindowText(hEdit_Sn, tgnum);
-	//		}
-	//		break;
-	//	case ID_B_SEATNUM4:
-	//		if (snbtncount < 2) {
-	//			snbtncount++;
-	//			lstrcat(tgnum, "4");
-	//			SetWindowText(hEdit_Sn, tgnum);
-	//		}
-	//		break;
-	//	case ID_B_SEATNUM5:
-	//		if (snbtncount < 2) {
-	//			snbtncount++;
-	//			lstrcat(tgnum, "5");
-	//			SetWindowText(hEdit_Sn, tgnum);
-	//		}
-	//		break;
-	//	case ID_B_SEATNUM6:
-	//		if (snbtncount < 2) {
-	//			snbtncount++;
-	//			lstrcat(tgnum, "6");
-	//			SetWindowText(hEdit_Sn, tgnum);
-	//		}
-	//		break;
-	//	case ID_B_SEATNUM7:
-	//		if (snbtncount < 2) {
-	//			snbtncount++;
-	//			lstrcat(tgnum, "7");
-	//			SetWindowText(hEdit_Sn, tgnum);
-	//		}
-	//		break;
-	//	case ID_B_SEATNUM8:
-	//		if (snbtncount < 2) {
-	//			snbtncount++;
-	//			lstrcat(tgnum, "8");
-	//			SetWindowText(hEdit_Sn, tgnum);
-	//		}
-	//		break;
-	//	case ID_B_SEATNUM9:
-	//		if (snbtncount < 2) {
-	//			snbtncount++;
-	//			lstrcat(tgnum, "9");
-	//			SetWindowText(hEdit_Sn, tgnum);
-	//		}
-	//		break;
-	//	case ID_B_ORDERCOUNT0:
-	//		if (ocbtncount < 2) {
-	//			ocbtncount++;
-	//			lstrcat(tgitemcount, "0");
-	//			SetWindowText(hEdit_OrderCount, tgitemcount);
-	//		}
-	//		break;
-	//	case ID_B_ORDERCOUNT1:
-	//		if (ocbtncount < 2) {
-	//			ocbtncount++;
-	//			lstrcat(tgitemcount, "1");
-	//			SetWindowText(hEdit_OrderCount, tgitemcount);
-	//		}
-	//		break;
-	//	case ID_B_ORDERCOUNT2:
-	//		if (ocbtncount < 2) {
-	//			ocbtncount++;
-	//			lstrcat(tgitemcount, "2");
-	//			SetWindowText(hEdit_OrderCount, tgitemcount);
-	//		}
-	//		break;
-	//	case ID_B_ORDERCOUNT3:
-	//		if (ocbtncount < 2) {
-	//			ocbtncount++;
-	//			lstrcat(tgitemcount, "3");
-	//			SetWindowText(hEdit_OrderCount, tgitemcount);
-	//		}
-	//		break;
-	//	case ID_B_ORDERCOUNT4:
-	//		if (ocbtncount < 2) {
-	//			ocbtncount++;
-	//			lstrcat(tgitemcount, "4");
-	//			SetWindowText(hEdit_OrderCount, tgitemcount);
-	//		}
-	//		break;
-	//	case ID_B_ORDERCOUNT5:
-	//		if (ocbtncount < 2) {
-	//			ocbtncount++;
-	//			lstrcat(tgitemcount, "5");
-	//			SetWindowText(hEdit_OrderCount, tgitemcount);
-	//		}
-	//		break;
-	//	case ID_B_ORDERCOUNT6:
-	//		if (ocbtncount < 2) {
-	//			ocbtncount++;
-	//			lstrcat(tgitemcount, "6");
-	//			SetWindowText(hEdit_OrderCount, tgitemcount);
-	//		}
-	//		break;
-	//	case ID_B_ORDERCOUNT7:
-	//		if (ocbtncount < 2) {
-	//			ocbtncount++;
-	//			lstrcat(tgitemcount, "7");
-	//			SetWindowText(hEdit_OrderCount, tgitemcount);
-	//		}
-	//		break;
-	//	case ID_B_ORDERCOUNT8:
-	//		if (ocbtncount < 2) {
-	//			ocbtncount++;
-	//			lstrcat(tgitemcount, "8");
-	//			SetWindowText(hEdit_OrderCount, tgitemcount);
-	//		}
-	//		break;
-	//	case ID_B_ORDERCOUNT9:
-	//		if (ocbtncount < 2) {
-	//			ocbtncount++;
-	//			lstrcat(tgitemcount, "9");
-	//			SetWindowText(hEdit_OrderCount, tgitemcount);
-	//		}
-	//		break;
-	//		//수정 버튼 눌렸을때
-	//	case ID_B_USERUPDATE:
-	//		GetWindowText(hEdit_Id, tgId, sizeof(tgId));
-	//		GetWindowText(hEdit_Name, tgName, sizeof(tgName));
-	//		GetWindowText(hEdit_Pw, tgPw, sizeof(tgPw));
-	//		GetWindowText(hEdit_Pn, tgPn, sizeof(tgPn));
-	//		GetWindowText(hEdit_Addr, tgAddr, sizeof(tgAddr));
-	//		GetWindowText(hEdit_Birth, tgBirth, sizeof(tgBirth));
-	//		if (lstrlen(tgId) != 0 && lstrlen(tgPw) != 0 && lstrlen(tgName) != 0 && lstrlen(tgPn) != 0 && lstrlen(tgAddr) != 0 && lstrlen(tgBirth) != 0)RequestUpdate();
-	//		else MessageBox(hWnd, "입력 오류!!", "회원수정", MB_OK);
-	//		break;
-	//		//유저에서 수정가기 버튼 눌렸을때
-	//	case ID_B_USER_GO_UPDATE:
-	//		UserUpdate();
-	//		break;
-	//	//로그인화면에서 가입 및 수정 버튼 눌렸을때 로그인에서 가입 및 수정으로
-	//	case ID_B_GO_JOIN:
-	//
-	//		LoginToJoin();
-	//		break;
-	//		//로그인 버튼 눌렸을때
-	//	case ID_B_LOGIN:
-	//		GetWindowText(hEdit_Login_Id, tgId, sizeof(tgId));
-	//		GetWindowText(hEdit_Login_Pw, tgPw, sizeof(tgPw));
-	//		if (lstrlen(tgId) != 0 && lstrlen(tgPw) != 0)RequestLogin();
-	//		else MessageBox(hWnd, "입력 오류!!", "로그인", MB_OK);
-	//		break;
-
-	//		//아이템리스트 노티피
-	//	case ID_L_ITEM:
-	//		switch (HIWORD(wParam)) {
-	//		case LBN_SELCHANGE:
-	//			selitemi = SendMessage(hListBox_ItemList, LB_GETCURSEL, 0, 0);													//주문 상품 선택(리스트박스의 인덱스로 1자리 형식으로)
-	//			selitemi += 1;
-	//			wsprintf(tgselitemi, "%d", selitemi);																									//아이템 인덱스 담기
-	//			selitemtrue = 1;
-	//		}
-	//		break;
-	//		//주문 눌렸을때
-	//	case ID_B_ORDER:
-	//		if(selitemtrue==1&&ocbtncount==2&&lstrcmp(tgitemcount,"00")!=0)RequestOrder();																							//아이템 선택 체크
-	//		else {
-	//			SendMessage(hListBox_ItemList,LB_SETCURSEL, (WPARAM)-1, 0);															//리스트박스의 현재 셀 초기화
-	//			selitemtrue = 0;																																			//입력아이템 초기화
-	//			lstrcpy(tgitemcount, "");																																//입력아이템숫자 초기화
-	//			SetWindowText(hEdit_OrderCount, tgitemcount);
-	//			MessageBox(hWnd, "입력 오류!!", "주문", MB_OK);
-	//			ocbtncount = 0;																																		//주문수량 버튼 횟수 초기화
-	//		}
-	//		lstrcpy(tgitemcount, "");																											//주문수량 문자열 초기화
-	//		selitemtrue = 0;
-	//		break;
-
-	//		//가입버튼 눌렸을때
-	//	case ID_B_JOIN:
-	//		GetWindowText(hEdit_Id, tgId, sizeof(tgId));
-	//		GetWindowText(hEdit_Name, tgName, sizeof(tgName));
-	//		GetWindowText(hEdit_Pw, tgPw, sizeof(tgPw));
-	//		GetWindowText(hEdit_Pn, tgPn, sizeof(tgPn));
-	//		GetWindowText(hEdit_Addr, tgAddr, sizeof(tgAddr));
-	//		GetWindowText(hEdit_Birth, tgBirth, sizeof(tgBirth));
-	//		if(lstrlen(tgId)!=0&&lstrlen(tgPw)!=0&&lstrlen(tgName)!=0&&lstrlen(tgPn)!=0&&lstrlen(tgAddr)!=0&&lstrlen(tgBirth)!=0)RequestJoin();
-	//		else MessageBox(hWnd, "입력 오류!!", "회원가입", MB_OK);
-	//		break;
-
-	//		//사용화면애서 주문가기 버튼 눌렸을때 사용화면에서 주문화면으로 
-	//	case ID_B_GO_ORDER:
-	//
-	//		UserToOrder();
-	//		break;
-	//		//자리선택화면에서 자리선택버튼 눌렸을때
-	//	case ID_B_SELSEAT://																																
-	//		
-	//		if (snbtncount == 2&&lstrcmp(tgnum,"00")!=0)RequestSelSeat();
-	//		else {
-	//			lstrcpy(tgnum, "");																																//입력숫자 초기화
-	//			SetWindowText(hEdit_Sn, tgnum);
-	//			MessageBox(hWnd, "입력 오류!!", "자리번호", MB_OK);
-	//			snbtncount = 0;																																		//자리번호버튼 횟수 초기화
-	//		}
-	//		break;
-	//	case ID_B_LOGOUT://																																			//로그아웃(로그인 했을때)
-	//		
-	//		RequestLogout();
-	//		break;
-	//	case ID_B_DELETE:																																			//탈퇴 수행(로그인 했을때)
-	//		
-	//		RequestDelete();
-	//		break;
-	//	}
-	//	return 0;
-	//case WM_DESTROY:
-	//	PostQuitMessage(0);
-	//	return 0;
-	//}
-	//return(DefWindowProc(hWnd, iMessage, wParam, lParam));
 	return 0;
 }
 BOOL MsgCrk_OnCreate(HWND hWnd,LPCREATESTRUCT lpCreateStruct) {
@@ -602,6 +264,7 @@ BOOL MsgCrk_OnCreate(HWND hWnd,LPCREATESTRUCT lpCreateStruct) {
 	SetTimer(hWnd, 1, 1000, NULL);			//시간 타이머
 	SetTimer(hWnd, 2, 1000, NULL);			//시간 타이머 종료하는 타이머
 	SetTimer(hWnd, 3, 100000, NULL);	//자리 반납 타이머
+	SetTimer(hWnd, 4, 1000, NULL);			//자리 반납 타이머 재설정
 	SendMessage(hWnd, WM_TIMER, 0, 0);
 
 	return TRUE;
@@ -675,6 +338,13 @@ void MsgCrk_OnTimer(HWND hWnd,UINT id) {
 		if (returnsn == 1) {																															//자리반납동작일때
 			ReturnSeatTimer();
 			ToSelSeat();
+			chkreturnsn = 1;
+		}
+		break;
+	case 4:
+		if (chkreturnsn == 1) {
+			SetReturnSeatTimer();																												//자리반납타이머 재설정
+			chkreturnsn = 0;
 		}
 		break;
 	}
