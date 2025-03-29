@@ -1,4 +1,5 @@
 #include "Socket.h"
+#include "Process.h"
 #include "Stock.h"
 #include "Revenue.h"
 #include "Employee.h"
@@ -54,13 +55,15 @@ HWND Work_I_List;		// 근무 리스트뷰
 
 // 운영 관련 함수////////////////////////////////////////////
 
-SEAT* create_S();		// 좌석 초기화
-
 /////////////////////////////////////////////////////////////
 
-// 운영 관련 변수////////////////////////////////////////////
+// 운영 및 동기화 관련 변수//////////////////////////////////
 
-SEAT* hSeat[30];
+SEAT* hSeat[MAX_SEAT];				// 좌석 구조체
+HANDLE Seat_Thread[MAX_SEAT];		// 좌석 스레드
+HANDLE Seat_Mutex[MAX_SEAT];			// 좌석 뮤텍스
+
+PQ *Seat_Front, *Seat_Rear;			// 좌석 우선순위 큐
 
 /////////////////////////////////////////////////////////////
 
@@ -69,12 +72,13 @@ SEAT* hSeat[30];
 SOCKET listensock;
 SOCKET clientsock = 0;
 SOCKET hSocket = 0;
-CS* C_S;									// 소켓 Linked		
 sockaddr_in addr_server;
 sockaddr_in addr_client;
 int addrlen_clt = sizeof(sockaddr);
 int nReturn;
 WSADATA wsadata;
+CS* C_S;										// 좌석 정보
+TCHAR Seat_Code[MAX_SEAT+1] = "";				// 좌석 현황 코드
 
 /////////////////////////////////////////////////////////////
 
@@ -98,10 +102,7 @@ SQLHSTMT hStmt;
 
 int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR IpszCmdParam, int nCmdShow) {
 
-	if (DBConnect() == FALSE) {
-		MessageBox(NULL, (LPCSTR)"데이터 베이스에 연결할 수 없습니다.", (LPCSTR)"에러", MB_OK);
-		return 0;
-	}
+	
 
 	HWND hWnd;
 	MSG Message;
@@ -184,15 +185,20 @@ void Init_Wnd(WNDCLASS* Wnd, int Proc_No) {
 LRESULT CALLBACK WndProc(HWND hWnd, UINT iMessage, WPARAM wParam, LPARAM lParam) {
 	HDC hdc;
 	PAINTSTRUCT ps;
+	static HWND BUTTON[30];
+	static int k = 0;
+	char num[5];
 
 	switch (iMessage) {
 	case WM_CREATE:
 		hWndMain = hWnd;
 		InitCommonControls();
 		
-		Image = ImageList_LoadBitmap(g_hInst, MAKEINTRESOURCE(IDB_BITMAP1), 45, 1, RGB(255, 255, 255));		//좌석 이미지리스트 설정 
-		SetTimer(hWnd, BuffT, 1, NULL);	//버퍼링 타이머 생성
-		C_S = create();		// 소켓 구조체 생성
+		if (DBConnect() == FALSE) {
+			MessageBox(NULL, (LPCSTR)"데이터 베이스에 연결할 수 없습니다.", (LPCSTR)"에러", MB_OK);
+			return 0;
+		}
+		//SetTimer(hWnd, BuffT, 1, NULL);	//버퍼링 타이머 생성
 
 		WNDCLASS Wnd_S;
 		WNDCLASS Wnd_R;
@@ -210,15 +216,40 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT iMessage, WPARAM wParam, LPARAM lParam)
 		Init_Wnd(&Wnd_C, 3);
 		// 근무기록 윈도우 설정
 		Init_Wnd(&Wnd_W, 4);
+		
 
-		SVR_Open();		// 서버오픈
+		// 초기화 단계
+		for (int i = 0; i < MAX_SEAT; i++) {
+			hSeat[i] = Create_SEAT();			// 좌석 초기화 30좌석 (나중에 가변으로 바꿀수있어야됌)
+		}
 
-		for (int i = 0; i < 30; i ++) {
-			hSeat[i] = create_S();				// 좌석 초기화 30좌석
+		C_S = Create_CS();
+		
+		Seat_Front = Create_PQ();
+		Seat_Rear = Create_PQ();
+
+
+		// 임시 좌석세팅
+		for (int i = 0; i < MAX_COL; i++) {
+			for (int j = 0; j < MAX_ROW; j++) {
+				k++;
+				_itoa_s(k, num, 10);
+				BUTTON[k - 1] = CreateWindow("button", num, WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON, 50 + (j * 150), 50 + (i * 130), 150, 50, hWndMain, (HMENU)(BUTTON_ID + k - 1), g_hInst, NULL);
+			}
+		}
+
+		Update_Seat_Code();
+
+		// 뮤텍스 생성
+		for (int i = 0; i < MAX_SEAT; i++) {
+			Seat_Mutex[i] = CreateMutex(NULL, FALSE, NULL);
+			if (Seat_Mutex[i] == NULL) return 0;
 		}
 
 		//DBExcuteSQL();		나중에 수정 개선할 함수입니다.
 
+		SVR_Open();		// 서버오픈
+		
 		return 0;
 
 	case WM_COMMAND:
@@ -262,7 +293,9 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT iMessage, WPARAM wParam, LPARAM lParam)
 		return 0;
 	case WM_DESTROY:
 		closesocket(clientsock);
+		SVR_Close();
 		WSACleanup();
+		DBDisconnect();
 		if (hBit) {
 			DeleteObject(hBit);
 		}
@@ -271,28 +304,6 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT iMessage, WPARAM wParam, LPARAM lParam)
 		return 0;
 	}
 	return(DefWindowProc(hWnd, iMessage, wParam, lParam));
-}
-
-/*--------------------------------------------------------
- DrawBitmap(HDC,int,int,HBITMAP): 지정좌표에 비트맵 출력
---------------------------------------------------------*/
-void DrawBitmap(HDC hdc, int x, int y, HBITMAP hBit) {
-	HDC MemDC;
-	HBITMAP OldBitmap;
-	int bx, by;
-	BITMAP bit;
-
-	MemDC = CreateCompatibleDC(hdc);
-	OldBitmap = (HBITMAP)SelectObject(MemDC, hBit);
-
-	GetObject(hBit, sizeof(BITMAP), &bit);
-	bx = bit.bmWidth;
-	by = bit.bmHeight;
-
-	BitBlt(hdc, x, y, bx, by, MemDC, 0, 0, SRCCOPY);
-
-	SelectObject(MemDC, OldBitmap);
-	DeleteDC(MemDC);
 }
 
 /*--------------------------------------------------------
@@ -329,14 +340,23 @@ void OnTimer() {
 }
 
 /*--------------------------------------------------------
- * create_S(): 좌석 초기화 함수
+ DrawBitmap(HDC,int,int,HBITMAP): 지정좌표에 비트맵 출력
 --------------------------------------------------------*/
-SEAT* create_S() {
-	SEAT* N;
+void DrawBitmap(HDC hdc, int x, int y, HBITMAP hBit) {
+	HDC MemDC;
+	HBITMAP OldBitmap;
+	int bx, by;
+	BITMAP bit;
 
-	N = (SEAT*)malloc(sizeof(SEAT));
-	N->state = false;
-	N->client = NULL;
+	MemDC = CreateCompatibleDC(hdc);
+	OldBitmap = (HBITMAP)SelectObject(MemDC, hBit);
 
-	return N;
+	GetObject(hBit, sizeof(BITMAP), &bit);
+	bx = bit.bmWidth;
+	by = bit.bmHeight;
+
+	BitBlt(hdc, x, y, bx, by, MemDC, 0, 0, SRCCOPY);
+
+	SelectObject(MemDC, OldBitmap);
+	DeleteDC(MemDC);
 }

@@ -1,5 +1,5 @@
-#ifndef __DB__
-#define __DB__
+#ifndef __DB_H__
+#define __DB_H__
 
 #include "Common.h"
 #include <sql.h>
