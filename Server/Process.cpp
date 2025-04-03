@@ -5,7 +5,7 @@ extern SEAT *hSeat[MAX_SEAT];
 extern TCHAR Seat_Code[MAX_SEAT + 1];
 extern TCHAR buf[];
 
-extern PQ *Seat_Front, *Seat_Rear;			// 좌석 우선순위 큐
+extern CQ *Charge_Front, *Charge_Rear;			// 주문 우선순위 큐
 
 /*--------------------------------------------------------
  Relay_Thread(LPVOID) : 좌석 스레드
@@ -64,59 +64,89 @@ void Split_C_T(TCHAR* CODE, TCHAR* TEXT) {
 }
 
 /*--------------------------------------------------------
- Create_PQ(): 좌석 우선순위 큐 초기화 함수
+ Split_I_P(TCHAR* ID, TCHAR* PWD, TCHAR* TEXT) : 텍스트를 
+ ID와 PWD로 분리하는 함수
+-------------------------------------------------------- */
+void Split_I_P(TCHAR* ID, TCHAR* PWD, TCHAR* TEXT) {
+	int i,j;
+
+	lstrcpy(ID, "");
+	lstrcpy(PWD, "");
+
+	for (i = 0; i < lstrlen(TEXT); i++) {
+		if (TEXT[i] != '-') {
+			ID[i] = TEXT[i];
+		}
+		else {
+			break;
+		}
+	}
+	ID[i] = '\0';
+
+	for (j = i + 1; j < lstrlen(TEXT); j++) {
+		PWD[j - (i + 1)] = TEXT[j];
+	}
+
+	PWD[j - (i + 1)] = '\0';
+
+}
+
+/*--------------------------------------------------------
+ Create_CQ(): 좌석 우선순위 큐 초기화 함수
 --------------------------------------------------------*/
-PQ* Create_PQ() {
-	PQ* N;
+CQ* Create_CQ() {
+	CQ* N;
 
-	N = (PQ*)malloc(sizeof(PQ));
+	N = (CQ*)malloc(sizeof(CQ));
 
-	N->num = 0;
+	N->Client_Info = NULL;
+	lstrcpy(N->Charge_Amount, "");
 	N->link = NULL;
 
 	return N;
 }
 
 /*--------------------------------------------------------
- Enque_PQ(int num): 좌석 우선순위 큐 엔큐
+ Enque_CQ(CQ*): 좌석 우선순위 큐 엔큐
 --------------------------------------------------------*/
-void Enque_PQ(int num) {
-	PQ* N;
+void Enque_CQ(CQ* Charge) {
+	CQ* N;
 
-	N = Create_PQ();
-	N->num = num;
-
-	if (Seat_Front->link == NULL && Seat_Rear->link == NULL) {
-		Seat_Front->link = N;
-		Seat_Rear->link = N;
+	N = Create_CQ();
+	N = Charge;
+	
+	if (Charge_Front->link == NULL && Charge_Rear->link == NULL) {
+		Charge_Front->link = N;
+		Charge_Rear->link = N;
 	}
 	else {
-		N->link = Seat_Rear->link;
-		Seat_Rear->link = N;
+		N->link = Charge_Rear->link;
+		Charge_Rear->link = N;
 	}
 }
 /*--------------------------------------------------------
- Deque_PQ(): 좌석 우선순위 큐 디큐
+ Deque_CQ(): 좌석 우선순위 큐 디큐
 --------------------------------------------------------*/
-int Deque_PQ() {
-	PQ* E;
-	int num;
+CQ* Deque_CQ() {
+	CQ* E, *N;
 
-	E = Seat_Front->link;
-	num = E->num;
+	N = Create_CQ();
 
-	Seat_Front = Seat_Front->link;
-	if (Seat_Front->link == NULL) {
-		Seat_Rear->link = NULL;
+	E = Charge_Front->link;
+	*N = *E;
+
+	Charge_Front = Charge_Front->link;
+	if (Charge_Front->link == NULL) {
+		Charge_Rear->link = NULL;
 	}
 
 	free(E);
-	return num;
+	return N;
 }
 
 /*--------------------------------------------------------
- IsEmpty_PQ(): 좌석 우선순위 큐 비었는지 확인하는 함수
+ IsEmpty_CQ(): 좌석 우선순위 큐 비었는지 확인하는 함수
 --------------------------------------------------------*/
-BOOL IsEmpty_PQ() {
-	return (((Seat_Front->link == NULL) && (Seat_Rear->link == NULL)) ? TRUE : FALSE);
+BOOL IsEmpty_CQ() {
+	return (((Charge_Front->link == NULL) && (Charge_Rear->link == NULL)) ? TRUE : FALSE);
 }

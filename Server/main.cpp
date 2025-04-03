@@ -63,7 +63,7 @@ SEAT* hSeat[MAX_SEAT];				// 좌석 구조체
 HANDLE Seat_Thread[MAX_SEAT];		// 좌석 스레드
 HANDLE Seat_Mutex[MAX_SEAT];			// 좌석 뮤텍스
 
-PQ *Seat_Front, *Seat_Rear;			// 좌석 우선순위 큐
+CQ *Charge_Front, *Charge_Rear;			// 주문 우선순위 큐
 
 /////////////////////////////////////////////////////////////
 
@@ -101,9 +101,6 @@ SQLHSTMT hStmt;
 /////////////////////////////////////////////////////////////
 
 int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR IpszCmdParam, int nCmdShow) {
-
-	
-
 	HWND hWnd;
 	MSG Message;
 	WNDCLASS WndClass;
@@ -198,6 +195,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT iMessage, WPARAM wParam, LPARAM lParam)
 			MessageBox(NULL, (LPCSTR)"데이터 베이스에 연결할 수 없습니다.", (LPCSTR)"에러", MB_OK);
 			return 0;
 		}
+
 		//SetTimer(hWnd, BuffT, 1, NULL);	//버퍼링 타이머 생성
 
 		WNDCLASS Wnd_S;
@@ -225,8 +223,8 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT iMessage, WPARAM wParam, LPARAM lParam)
 
 		C_S = Create_CS();
 		
-		Seat_Front = Create_PQ();
-		Seat_Rear = Create_PQ();
+		Charge_Front = Create_CQ();
+		Charge_Rear = Create_CQ();
 
 
 		// 임시 좌석세팅

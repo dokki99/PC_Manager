@@ -165,7 +165,7 @@ DWORD WINAPI Connect_Thread(LPVOID Param) {
 --------------------------------------------------------*/
 DWORD WINAPI Recv_Thread(LPVOID Param) {
 	SOCKET* P = (SOCKET*)Param;
-	TCHAR CODE[4], TEXT[256], Send_TEXT[300];
+	TCHAR CODE[4], TEXT[256], ID[20], PWD[20],pNum[14], Send_TEXT[300];
 	int num = 0;
 	
 	while (1) {
@@ -175,26 +175,62 @@ DWORD WINAPI Recv_Thread(LPVOID Param) {
 		if (nReturn != 0 && nReturn != SOCKET_ERROR) {
 			Split_C_T(CODE, TEXT);
 			
-			if (lstrcmp(CODE,"C00") == 0) {				
-				// 접속한 클라이언트에게 현재 좌석 상태를 보내주기
-				Send_Text("S00", "", P);
-			}
-			else if (lstrcmp(CODE, "C01") == 0) {
-				num = atoi(TEXT);
-				WaitForSingleObject(Seat_Mutex[num - 1], INFINITE);
-
-				if (hSeat[num - 1]->State == 0) {
-					hSeat[num - 1]->State = 1;
+			if (lstrcmp(CODE, "C00") == 0) {
+				// 로그인 가능한지 확인
+				Split_I_P(ID, PWD, TEXT);
+				if (Login_Info_Check(ID, PWD) == TRUE) {
 					lstrcpy(TEXT, "SUCCESS");
 				}
 				else {
 					lstrcpy(TEXT, "FAIL");
 				}
+				Send_Text("S00", TEXT, P);
+			}
+			else if (lstrcmp(CODE, "C01") == 0) {
+				// 핸드폰 번호로 아이디 찾아서 보내주기
+				
+			}
+			else if (lstrcmp(CODE, "C02") == 0) {
+				// ID와 전화번호를 받고 PW초기화 시켜주기
+				
+			}
+			else if (lstrcmp(CODE, "C03") == 0) {
+				// 회원가입 가능한지 확인 및 가입
+				
+			}
+			else if (lstrcmp(CODE,"C04") == 0) {				
+				// 접속한 클라이언트에게 현재 좌석 상태를 보내주기
+				Send_Text("S04", "", P);
+			}
+			else if (lstrcmp(CODE, "C05") == 0) {
+				num = atoi(TEXT);
+				WaitForSingleObject(Seat_Mutex[num - 1], INFINITE);
 
-				Send_Text("S01", TEXT, P);
+				if (hSeat[num - 1]->State == 0) {
+					// 좌석 선점 완료
+					// 좌석 구조체 나머지 값 연결해주기
+					hSeat[num - 1]->State = 1;
+					hSeat[num - 1]->Client_Sock = *P;
+					// hSeat[num - 1]->Client_Info 고객 정보 담아서 여기 넣어줍시다
+					// hSeat[num - 1]->Thread_ID 는 CreateThread 에서 이미 담겨져있습니다.
+					ResumeThread(Seat_Thread[num - 1]);	// 매칭된 스레드를 대기상태 해제 시켜줍니다.
+					// 이후에 주문/자리이동/시간추가와 같은 작업은 좌석스레드에서 해결됩니다.
+					lstrcpy(TEXT, "SUCCESS");
+				}
+				else {
+					// 좌석 선점 실패
+					lstrcpy(TEXT, "FAIL");
+					
+				}
+				// 좌석 선점 성공/실패 메시지 전송
+				Send_Text("S05", TEXT, P);
 
 				ReleaseMutex(Seat_Mutex[num - 1]);
 			}
+			else if (lstrcmp(CODE, "C06") == 0) {
+				// 계정에 요금충전
+			}
+			
 		}
 		else {
 			MessageBox(hWndMain, "수신에러", "server", MB_OK);
@@ -215,10 +251,15 @@ void Send_Text(const char* code, const char* Text, SOCKET* P) {
 	wsprintf(CODE, "%s", code);
 
 	if (lstrcmp(CODE, "S00") == 0) {
+		// 해당 소켓에 [SUCCESS / FAIL] 메세지 보내기
+		wsprintf(TEXT, "%s-%s", CODE, Text);
+		nReturn = send(*P, TEXT, sizeof(TEXT), 0);
+	}
+	else if (lstrcmp(CODE, "S04") == 0) {
 		wsprintf(TEXT, "%s-%s", CODE, Seat_Code);
 		nReturn = send(*P, TEXT, sizeof(TEXT), 0);
 	}
-	else if (lstrcmp(CODE, "S01") == 0) {
+	else if (lstrcmp(CODE, "S05") == 0) {
 		CS* S;
 
 		// 좌석정보 업데이트 
@@ -229,7 +270,7 @@ void Send_Text(const char* code, const char* Text, SOCKET* P) {
 			S = C_S;
 
 			while (S->link != NULL) {
-				wsprintf(TEXT, "%s-%s", "S00", Seat_Code);
+				wsprintf(TEXT, "%s-%s", "S04", Seat_Code);
 				S = S->link;
 				nReturn = send(S->Sock, TEXT, sizeof(TEXT), 0);
 			}

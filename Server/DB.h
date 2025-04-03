@@ -15,7 +15,12 @@ BOOL Load_Revenue_Data();
 BOOL Load_Employee_Data();
 BOOL Load_Customer_Data();
 BOOL Load_Work_Data();
+
+BOOL Login_Info_Check(TCHAR* ,TCHAR *);
+BOOL Find_ID(TCHAR*, TCHAR*);
 /////////////////////////////////////////////////////////////
 
+
+// DB관련함수 왠만하면 저장 프로시저로 바꿀수 있는건 저장 프로시저로 만듭시다!
 
 #endif

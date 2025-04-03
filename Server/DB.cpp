@@ -246,20 +246,17 @@ BOOL Load_Employee_Data() {
 --------------------------------------------------------*/
 BOOL Load_Customer_Data() {
 	LVITEM LI;
-	SQLCHAR C_ID[30], C_Name[30], C_PWD[30], C_Phone[50], C_Adress[50], C_Birth[15];
+	SQLCHAR C_ID[30], C_PWD[30], C_Phone[50];
 	TIMESTAMP_STRUCT C_Time;
-	SQLLEN I_C_ID, I_C_Name, I_C_PWD, I_C_Phone, I_C_Adress, I_C_Birth, I_C_Time;
+	SQLLEN I_C_ID, I_C_PWD, I_C_Phone, I_C_Time;
 	TCHAR Date[100];
 
 	SQLBindCol(hStmt, 1, SQL_C_CHAR, C_ID, sizeof(C_ID), &I_C_ID);
-	SQLBindCol(hStmt, 2, SQL_C_CHAR, C_Name, sizeof(C_Name), &I_C_Name);
-	SQLBindCol(hStmt, 3, SQL_C_CHAR, C_PWD, sizeof(C_PWD), &I_C_PWD);
-	SQLBindCol(hStmt, 4, SQL_C_CHAR, C_Phone, sizeof(C_Phone), &I_C_Phone);
-	SQLBindCol(hStmt, 5, SQL_C_CHAR, C_Adress, sizeof(C_Adress), &I_C_Adress);
-	SQLBindCol(hStmt, 6, SQL_C_CHAR, C_Birth, sizeof(C_Birth), &I_C_Birth);
-	SQLBindCol(hStmt, 7, SQL_C_TYPE_TIMESTAMP, &C_Time, sizeof(C_Time), &I_C_Time);
+	SQLBindCol(hStmt, 2, SQL_C_CHAR, C_PWD, sizeof(C_PWD), &I_C_PWD);
+	SQLBindCol(hStmt, 3, SQL_C_CHAR, C_Phone, sizeof(C_Phone), &I_C_Phone);
+	SQLBindCol(hStmt, 4, SQL_C_TYPE_TIMESTAMP, &C_Time, sizeof(C_Time), &I_C_Time);
 
-	if (SQLExecDirect(hStmt, (SQLCHAR*)"select C_ID, C_Name, C_PWD, C_Phone, C_Adress, C_Birth, C_Time from dbo.Customer_Info", SQL_NTS) != SQL_SUCCESS) return FALSE;
+	if (SQLExecDirect(hStmt, (SQLCHAR*)"select C_ID, C_PWD, C_Phone, C_Time from dbo.Customer_Info", SQL_NTS) != SQL_SUCCESS) return FALSE;
 
 	LI.mask = LVIF_TEXT;
 
@@ -272,26 +269,14 @@ BOOL Load_Customer_Data() {
 		SendMessage(Customer_I_List, LVM_INSERTITEM, 0, (LPARAM)&LI);
 
 		LI.iSubItem = 1;
-		LI.pszText = (LPSTR)C_Name;
-		SendMessage(Customer_I_List, LVM_SETITEM, 0, (LPARAM)&LI);
-
-		LI.iSubItem = 2;
 		LI.pszText = (LPSTR)C_PWD;
 		SendMessage(Customer_I_List, LVM_SETITEM, 0, (LPARAM)&LI);
 
-		LI.iSubItem = 3;
+		LI.iSubItem = 2;
 		LI.pszText = (LPSTR)C_Phone;
 		SendMessage(Customer_I_List, LVM_SETITEM, 0, (LPARAM)&LI);
 
-		LI.iSubItem = 4;
-		LI.pszText = (LPSTR)C_Adress;
-		SendMessage(Customer_I_List, LVM_SETITEM, 0, (LPARAM)&LI);
-
-		LI.iSubItem = 5;
-		LI.pszText = (LPSTR)C_Birth;
-		SendMessage(Customer_I_List, LVM_SETITEM, 0, (LPARAM)&LI);
-
-		LI.iSubItem = 6;
+		LI.iSubItem = 3;
 		wsprintf(Date, "%d-%d-%d %d:%d:%d", C_Time.year, C_Time.month, C_Time.day, C_Time.hour, C_Time.minute, C_Time.second);
 		LI.pszText = Date;
 		SendMessage(Customer_I_List, LVM_SETITEM, 0, (LPARAM)&LI);
@@ -348,5 +333,60 @@ BOOL Load_Work_Data() {
 	}
 
 	if (hStmt) SQLCloseCursor(hStmt);
+	return TRUE;
+}
+
+/*--------------------------------------------------------
+ Login_Info_Check(TCHAR* ,TCHAR *): 로그인 가능한지 정보 확인
+--------------------------------------------------------*/
+BOOL Login_Info_Check(TCHAR* ID, TCHAR* PWD) {
+	int Cnt;
+	TCHAR Query[200];
+	SQLLEN I_Cnt;
+
+	lstrcpy(Query, "select COUNT(*) from dbo.Customer_Info where C_ID = '");
+	lstrcat(Query, ID);
+	lstrcat(Query, "' AND C_PWD = '");
+	lstrcat(Query, PWD);
+	lstrcat(Query, "'");
+
+	SQLBindCol(hStmt, 1, SQL_C_ULONG, &Cnt, 0, &I_Cnt);
+
+	if(SQLExecDirect(hStmt, (SQLCHAR*)Query, SQL_NTS) != SQL_SUCCESS) return FALSE;	
+
+	SQLFetch(hStmt);
+	
+	if (hStmt) SQLCloseCursor(hStmt);
+
+	return Cnt != 0 ? TRUE : FALSE;
+}
+
+/*--------------------------------------------------------
+ Find_ID(TCHAR* ,TCHAR *): 핸드폰번호로 매칭되는 ID 찾기
+--------------------------------------------------------*/
+BOOL Find_ID(TCHAR* ID, TCHAR* pNum) {
+	TCHAR C_ID[14];
+	TCHAR Query[200];
+	SQLLEN I_C_ID;
+
+	lstrcpy(C_ID, "");	// 이부분은 DB관련 변수이기 때문에 원래 초기화해선 안됩니다.
+
+	lstrcpy(Query, "select C_ID from dbo.Customer_Info where C_Phone = '");
+	lstrcat(Query, pNum);
+	lstrcat(Query, "'");
+
+	SQLBindCol(hStmt, 1, SQL_C_CHAR, C_ID, sizeof(C_ID), &I_C_ID);
+
+	if (SQLExecDirect(hStmt, (SQLCHAR*)Query, SQL_NTS) != SQL_SUCCESS) return FALSE;
+
+	SQLFetch(hStmt);
+
+	if (hStmt) SQLCloseCursor(hStmt);
+
+	if (lstrcmp(C_ID, "") == 0) {
+		return FALSE;
+	}
+	lstrcpy(ID, C_ID);
+	
 	return TRUE;
 }

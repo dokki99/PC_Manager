@@ -15,7 +15,7 @@ typedef struct {
 	int State;				// 좌석 상태(0:사용안함, 1:예약중, 2:사용중, 3:준비중)
 	SOCKET Client_Sock;		// 클라이언트 소켓
 	CI* Client_Info;		// 비트맵에 띄워질 고객 정보
-	DWORD Thread_ID;		// 스레드 ID
+	DWORD Thread_ID;		// 좌석 스레드 ID
 }SEAT;
 
 SEAT* Create_SEAT();			// 좌석 초기화

@@ -40,7 +40,7 @@ HANDLE hThread;
 // 서버관련 변수/////////////////////////////////////////////
 
 BOOL CONN_ST = FALSE;						// 서버 오픈 상태
-const char g_szlpAddress[17] = "192.168.0.217";
+const char g_szlpAddress[17] = "192.168.73.70";
 const unsigned short g_uPort = 7878;		// 포트 넘버
 const int buflen = 4096;					// 버퍼 크기
 TCHAR buf[buflen];
@@ -105,29 +105,29 @@ LRESULT CALLBACK MainWndProc(HWND hWnd, UINT iMessage, WPARAM wParam, LPARAM lPa
 		hWndMain = hWnd;
 		hBrush = CreateSolidBrush(RGB(218, 220, 214));
 
-		//// 현재 접속 유저 아이디 초기화
-		//lstrcpy(hUser_ID, "");
+		// 현재 접속 유저 아이디 초기화
+		lstrcpy(hUser_ID, "");
 
-		//// 소켓 초기화 (윈속 라이브러리 버전, 윈속 시스템 관련 정보)//////////////////////////////
-		//nReturn = WSAStartup(WORD(2.0), &wsadata);
+		// 소켓 초기화 (윈속 라이브러리 버전, 윈속 시스템 관련 정보)//////////////////////////////
+		nReturn = WSAStartup(WORD(2.0), &wsadata);
 
-		//// 소켓 생성 (IPv4: AF_INET | IPv6: AF_INET6 , 소켓 통신 타입, 프로토콜 결정)
-		//clientsock = socket(AF_INET, SOCK_STREAM, 0);
+		// 소켓 생성 (IPv4: AF_INET | IPv6: AF_INET6 , 소켓 통신 타입, 프로토콜 결정)
+		clientsock = socket(AF_INET, SOCK_STREAM, 0);
 
-		//addr_client.sin_family = AF_INET;
-		//addr_client.sin_addr.s_addr = inet_addr(g_szlpAddress);
-		//addr_client.sin_port = htons(g_uPort);
+		addr_client.sin_family = AF_INET;
+		addr_client.sin_addr.s_addr = inet_addr(g_szlpAddress);
+		addr_client.sin_port = htons(g_uPort);
 
-		//// 서버 연결
-		//nReturn = connect(clientsock, (sockaddr*)&addr_client, addrlen_clt);
+		// 서버 연결
+		nReturn = connect(clientsock, (sockaddr*)&addr_client, addrlen_clt);
 
-		//// 수신 스레드 생성
-		//hThread = CreateThread(NULL, 0, Recv_Thread, &clientsock, 0, &ThreadID);
-		//CloseHandle(hThread);
+		// 수신 스레드 생성
+		hThread = CreateThread(NULL, 0, Recv_Thread, &clientsock, 0, &ThreadID);
+		CloseHandle(hThread);
 
-		//if (nReturn) {
-		//	MessageBox(hWndMain, "연결실패", "오류", MB_OK);
-		//}
+		if (nReturn) {
+			MessageBox(hWndMain, "연결실패", "오류", MB_OK);
+		}
 
 		//////////////////////////////////////////////////////////////////////////////////////////
 
