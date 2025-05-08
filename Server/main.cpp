@@ -7,7 +7,7 @@
 #include "Work.h"
 
 // 타이머 상수 설정//////////////////////////////////////////
-typedef enum { BuffT = 1 };
+typedef enum { LocalT = 1 };
 /////////////////////////////////////////////////////////////
 
 void Init_Wnd(WNDCLASS*, int);
@@ -59,11 +59,25 @@ HWND Work_I_List;		// 근무 리스트뷰
 
 // 운영 및 동기화 관련 변수//////////////////////////////////
 
-SEAT* hSeat[MAX_SEAT];				// 좌석 구조체
-HANDLE Seat_Thread[MAX_SEAT];		// 좌석 스레드
+MAP* hMap;								// 매핑 구조체
+SEAT* hSeat[MAX_SEAT];					// 좌석 구조체
+
+HANDLE Charge_Thread;					// 충전 스레드(충전 프로세스)
+HANDLE Charge_Mutex;					// 충전 뮤텍스
+
+HANDLE Seat_Thread[MAX_SEAT];			// 좌석 스레드
 HANDLE Seat_Mutex[MAX_SEAT];			// 좌석 뮤텍스
 
-CQ *Charge_Front, *Charge_Rear;			// 주문 우선순위 큐
+HANDLE Send_Mutex;						// 송신 큐 INPUT 뮤택스
+HANDLE Transform_Mutex;					// 가공 뮤택스
+
+CQ *Charge_Front, *Charge_Rear;			// 충전 우선순위 큐
+SQ *Send_Front, *Send_Rear;				// 송신 우선순위 큐
+
+DWORD Charge_TID;						// 충전 스레드 ID
+DWORD Send_TID;							// 송신 스레드 ID
+
+int Local_Time;							// 60초 타이머 변수
 
 /////////////////////////////////////////////////////////////
 
@@ -77,7 +91,8 @@ sockaddr_in addr_client;
 int addrlen_clt = sizeof(sockaddr);
 int nReturn;
 WSADATA wsadata;
-CS* C_S;										// 좌석 정보
+CS* C_S;										// 현재 접속 클라이언트 정보
+CI* C_I;										// 현재 접속 고객 정보
 TCHAR Seat_Code[MAX_SEAT+1] = "";				// 좌석 현황 코드
 
 /////////////////////////////////////////////////////////////
@@ -92,8 +107,8 @@ TCHAR buf[buflen];
 /////////////////////////////////////////////////////////////
 
 // DB관련 변수///////////////////////////////////////////////
-TCHAR ID[10] = "commonPC";
-TCHAR PWD[10] = "PC123";
+TCHAR DB_ID[10] = "commonPC";
+TCHAR DB_PWD[10] = "PC123";
 SQLHENV hEnv;
 SQLHDBC hDbc;
 SQLHSTMT hStmt;
@@ -126,8 +141,6 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR IpszCmd
 		TranslateMessage(&Message);
 		DispatchMessage(&Message);
 	}
-
-	DBDisconnect();
 
 	return (int)Message.wParam;
 
@@ -182,9 +195,11 @@ void Init_Wnd(WNDCLASS* Wnd, int Proc_No) {
 LRESULT CALLBACK WndProc(HWND hWnd, UINT iMessage, WPARAM wParam, LPARAM lParam) {
 	HDC hdc;
 	PAINTSTRUCT ps;
+	TCHAR t[200], T[300] = "010-9275-xxx5";
 	static HWND BUTTON[30];
 	static int k = 0;
 	char num[5];
+	int E;
 
 	switch (iMessage) {
 	case WM_CREATE:
@@ -196,7 +211,8 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT iMessage, WPARAM wParam, LPARAM lParam)
 			return 0;
 		}
 
-		//SetTimer(hWnd, BuffT, 1, NULL);	//버퍼링 타이머 생성
+		Local_Time = 0;								// 타이머 변수 초기화
+		SetTimer(hWnd, LocalT, 1, NULL);	// 타이머 생성
 
 		WNDCLASS Wnd_S;
 		WNDCLASS Wnd_R;
@@ -216,20 +232,43 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT iMessage, WPARAM wParam, LPARAM lParam)
 		Init_Wnd(&Wnd_W, 4);
 		
 
+		hMap = Create_MAP();
+
 		// 초기화 단계
 		for (int i = 0; i < MAX_SEAT; i++) {
 			hSeat[i] = Create_SEAT();			// 좌석 초기화 30좌석 (나중에 가변으로 바꿀수있어야됌)
 		}
 
 		C_S = Create_CS();
+		C_I = Create_CI();
 		
+		// 충전 우선순위 큐 초기화
 		Charge_Front = Create_CQ();
 		Charge_Rear = Create_CQ();
 
+		// 송신 우선순위 큐 초기화
+		Send_Front = Create_SQ();
+		Send_Rear = Create_SQ();
+
+		// 충전 뮤텍스 생성
+		Charge_Mutex = CreateMutex(NULL, FALSE, NULL);
+		if (Charge_Mutex == NULL) return 0;
+
+		// 송신 뮤택스 생성
+		Send_Mutex = CreateMutex(NULL, FALSE, NULL);
+		if (Send_Mutex == NULL) return 0;
+		
+
+		// 가공 뮤택스 생성
+		Transform_Mutex = CreateMutex(NULL, FALSE, NULL);
+		if (Transform_Mutex == NULL) return 0;
+
+		// 충전 프로세스 생성
+		Charge_Thread = CreateThread(NULL, 0, Charge_Process, NULL, 0, &Charge_TID);
 
 		// 임시 좌석세팅
-		for (int i = 0; i < MAX_COL; i++) {
-			for (int j = 0; j < MAX_ROW; j++) {
+		for (int i = 0; i < 5; i++) {
+			for (int j = 0; j < 6; j++) {
 				k++;
 				_itoa_s(k, num, 10);
 				BUTTON[k - 1] = CreateWindow("button", num, WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON, 50 + (j * 150), 50 + (i * 130), 150, 50, hWndMain, (HMENU)(BUTTON_ID + k - 1), g_hInst, NULL);
@@ -238,7 +277,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT iMessage, WPARAM wParam, LPARAM lParam)
 
 		Update_Seat_Code();
 
-		// 뮤텍스 생성
+		// 좌석 뮤텍스 생성
 		for (int i = 0; i < MAX_SEAT; i++) {
 			Seat_Mutex[i] = CreateMutex(NULL, FALSE, NULL);
 			if (Seat_Mutex[i] == NULL) return 0;
@@ -273,12 +312,24 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT iMessage, WPARAM wParam, LPARAM lParam)
 			hWnd_W = CreateWindow(W_Class, W_Class, WS_VISIBLE | WS_OVERLAPPEDWINDOW, CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT, NULL, (HMENU)NULL, g_hInst, NULL);
 			ShowWindow(hWnd_W, SW_SHOW);
 			break;
+		case BUTTON_ID:
+			// DB쪽 기능을 테스트할거야 일단 1번으로
+			E = Time_To_Int("16:52:54");
+			wsprintf(t, "%d",E);
+			MessageBox(hWndMain, t, "1", MB_OK);
+			break;
 		}
 		return 0;
 	case WM_TIMER:
 		switch (wParam) {
-		case BuffT:
-			OnTimer();
+		case LocalT:
+			//OnTimer();
+			Local_Time++;
+			if (60 == Local_Time) {
+				// 이때 DB와 접속한 손님 좌석에 시간 갱신
+
+				Local_Time = 0;
+			}
 			break;
 		}
 		return 0;
@@ -297,7 +348,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT iMessage, WPARAM wParam, LPARAM lParam)
 		if (hBit) {
 			DeleteObject(hBit);
 		}
-		KillTimer(hWnd, BuffT);			//버퍼링 타이머 Kill
+		KillTimer(hWnd, LocalT);			// 타이머 Kill
 		PostQuitMessage(0);
 		return 0;
 	}

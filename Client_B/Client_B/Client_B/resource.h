@@ -3,7 +3,8 @@
 // Client_B.rc에서 사용되고 있습니다.
 //
 #define IDD_DLG_SEAT                    102
-#define UTIL_BTN_ID                     300	//300~399 UTILITY BUTTON
+#define UTIL_BTN	                    300		// 300~399 UTILITY BUTTON
+#define CHARGE_BTN						400		// 400~499 CHARGE BUTTON
 #define IDC_BTN_SEAT1                   200
 #define IDC_BTN_SEAT2                   201
 #define IDC_BTN_SEAT3                   202

@@ -16,8 +16,12 @@ BOOL Load_Employee_Data();
 BOOL Load_Customer_Data();
 BOOL Load_Work_Data();
 
-BOOL Login_Info_Check(TCHAR* ,TCHAR *);
+BOOL Login_Info_Check(const TCHAR* , const TCHAR *, int);
+int Get_Time(TCHAR*);
+BOOL Charge_Time(TCHAR*, int);
 BOOL Find_ID(TCHAR*, TCHAR*);
+BOOL PWD_Reset(TCHAR*, TCHAR*);
+BOOL Regist_Customer(TCHAR*, TCHAR*, TCHAR*);
 /////////////////////////////////////////////////////////////
 
 

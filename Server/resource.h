@@ -9,6 +9,7 @@
 #define ID_R_INFO                       40017
 #define ID_S_INFO                       40018
 #define ID_W_INFO                       40020
+#define BUTTON_ID						200
 
 // Next default values for new objects
 // 

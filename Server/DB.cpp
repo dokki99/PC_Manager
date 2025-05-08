@@ -2,8 +2,8 @@
 
 // DB관련 변수///////////////////////////////////////////////
 
-extern TCHAR ID[];
-extern TCHAR PWD[];
+extern TCHAR DB_ID[];
+extern TCHAR DB_PWD[];
 extern SQLHENV hEnv;
 extern SQLHDBC hDbc;
 extern SQLHSTMT hStmt;
@@ -15,6 +15,7 @@ extern HWND Revenue_I_List;		// 매출 리스트뷰
 extern HWND Employee_I_List;	// 직원 리스트뷰
 extern HWND Customer_I_List;	// 회원 리스트뷰
 extern HWND Work_I_List;		// 근무 리스트뷰
+
 
 /*--------------------------------------------------------
  DBConnect(): DB 연결
@@ -29,7 +30,7 @@ BOOL DBConnect() {
 
 	// 연결 핸들을 할당하고 연결한다
 	if (SQLAllocHandle(SQL_HANDLE_DBC, hEnv, &hDbc) != SQL_SUCCESS) return FALSE;
-	Ret = SQLConnect(hDbc, (SQLCHAR*)"PCDB", SQL_NTS, (SQLCHAR*)ID, SQL_NTS, (SQLCHAR*)PWD, SQL_NTS);
+	Ret = SQLConnect(hDbc, (SQLCHAR*)"PCDB", SQL_NTS, (SQLCHAR*)DB_ID, SQL_NTS, (SQLCHAR*)DB_PWD, SQL_NTS);
 	if ((Ret != SQL_SUCCESS) && (Ret != SQL_SUCCESS_WITH_INFO)) return FALSE;
 
 	// 명령 핸들을 할당한다.
@@ -337,17 +338,30 @@ BOOL Load_Work_Data() {
 }
 
 /*--------------------------------------------------------
- Login_Info_Check(TCHAR* ,TCHAR *): 로그인 가능한지 정보 확인
+ Login_Info_Check(TCHAR* ,TCHAR *, int ): 
+ 로그인 / 회원가입 관련 정보 확인하는 함수
+ 
+ state = 1 : ID,PWD		$ 로그인
+ state = 2 : ID,pNum	$ 비밀번호 초기화
+ state = 3 : ID,pNum	$ 회원가입 및 요금충전
 --------------------------------------------------------*/
-BOOL Login_Info_Check(TCHAR* ID, TCHAR* PWD) {
+BOOL Login_Info_Check(const TCHAR* ID, const TCHAR* Data, int state) {
 	int Cnt;
 	TCHAR Query[200];
 	SQLLEN I_Cnt;
 
 	lstrcpy(Query, "select COUNT(*) from dbo.Customer_Info where C_ID = '");
 	lstrcat(Query, ID);
-	lstrcat(Query, "' AND C_PWD = '");
-	lstrcat(Query, PWD);
+	if (state == 1) {
+		lstrcat(Query, "' AND C_PWD = '");
+	}
+	else if(state == 2) {
+		lstrcat(Query, "' AND C_Phone = '");
+	}
+	else if (state == 3) {
+		lstrcat(Query, "' OR C_Phone = '");				// 요금충전일 경우에는
+	}
+	lstrcat(Query, Data);
 	lstrcat(Query, "'");
 
 	SQLBindCol(hStmt, 1, SQL_C_ULONG, &Cnt, 0, &I_Cnt);
@@ -360,6 +374,55 @@ BOOL Login_Info_Check(TCHAR* ID, TCHAR* PWD) {
 
 	return Cnt != 0 ? TRUE : FALSE;
 }
+
+/*--------------------------------------------------------
+ Get_Time(TCHAR* ): 로그인 정보에 맞는 회원의 남은
+ 시간을 가져옵니다.
+--------------------------------------------------------*/
+int Get_Time(TCHAR* ID) {
+	int Second;
+	TCHAR Query[200];
+	SQLLEN L_Second;
+
+	lstrcpy(Query, "select C_TIME from dbo.Customer_Info where C_ID = '");
+	lstrcat(Query, ID);
+	lstrcat(Query, "'");
+
+	SQLBindCol(hStmt, 1, SQL_C_ULONG, &Second, 0, &L_Second);
+
+	if (SQLExecDirect(hStmt, (SQLCHAR*)Query, SQL_NTS) != SQL_SUCCESS) return -1;
+
+	SQLFetch(hStmt);
+
+	if (hStmt) SQLCloseCursor(hStmt);
+
+	return Second;
+}
+
+/*--------------------------------------------------------
+ Charge_Time(TCHAR* ,int ): 로그인 정보에 맞는
+ 회원의 시간을 충전합니다.
+--------------------------------------------------------*/
+BOOL Charge_Time(TCHAR* ID,int Total_Second) {
+	TCHAR Query[200],Charge_Time[15];
+
+	wsprintf(Charge_Time, "%d", Total_Second);
+
+	lstrcpy(Query, "UPDATE Customer_Info SET C_TIME = ");
+	lstrcat(Query, Charge_Time);
+	lstrcat(Query, " WHERE C_ID = '");
+	lstrcat(Query, ID);
+	lstrcat(Query, "'");
+
+	if (SQLExecDirect(hStmt, (SQLCHAR*)Query, SQL_NTS) != SQL_SUCCESS) return FALSE;
+
+	SQLFetch(hStmt);
+
+	if (hStmt) SQLCloseCursor(hStmt);
+
+	return TRUE;
+}
+
 
 /*--------------------------------------------------------
  Find_ID(TCHAR* ,TCHAR *): 핸드폰번호로 매칭되는 ID 찾기
@@ -383,10 +446,47 @@ BOOL Find_ID(TCHAR* ID, TCHAR* pNum) {
 
 	if (hStmt) SQLCloseCursor(hStmt);
 
-	if (lstrcmp(C_ID, "") == 0) {
-		return FALSE;
-	}
+	if (lstrcmp(C_ID, "") == 0)	return FALSE;
+	
 	lstrcpy(ID, C_ID);
 	
+	return TRUE;
+}
+
+/*--------------------------------------------------------
+ PWD_Reset(TCHAR* ,TCHAR *): 아이디 핸드폰 번호를 입력하여
+ 비밀번호 123456789a로 초기화
+--------------------------------------------------------*/
+BOOL PWD_Reset(TCHAR* ID, TCHAR* pNum) {
+	TCHAR Query[200];
+
+	lstrcpy(Query, "update dbo.Customer_Info set C_PWD = '123456789a' where C_ID = '");
+	lstrcat(Query, ID);
+	lstrcat(Query, "' AND C_Phone = '");
+	lstrcat(Query, pNum);
+	lstrcat(Query, "'");
+
+	if (SQLExecDirect(hStmt, (SQLCHAR*)Query, SQL_NTS) != SQL_SUCCESS) return FALSE;
+
+	return TRUE;
+	
+}
+
+/*--------------------------------------------------------
+ Regist_Customer(TCHAR* , TCHAR* , TCHAR *): 회원가입 함수
+--------------------------------------------------------*/
+BOOL Regist_Customer(TCHAR* ID, TCHAR* PWD, TCHAR *pNum) {
+	TCHAR Query[200];
+
+	lstrcpy(Query, "INSERT INTO Customer_Info VALUES(");
+	lstrcat(Query, ID);
+	lstrcat(Query, ", ");
+	lstrcat(Query, PWD);
+	lstrcat(Query, ", ");
+	lstrcat(Query, pNum);
+	lstrcat(Query, ", 0)");
+
+	if (SQLExecDirect(hStmt, (SQLCHAR*)Query, SQL_NTS) != SQL_SUCCESS) return FALSE;
+
 	return TRUE;
 }

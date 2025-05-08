@@ -3,6 +3,7 @@
 extern HINSTANCE g_hInst;
 extern HWND hWndMain;		// 메인 화면 핸들
 extern HWND Customer_I_List;	// 회원 리스트뷰
+extern CI* C_I;
 
 /*--------------------------------------------------------
  Customer_Info_Proc: 회원정보 프로시저
@@ -53,4 +54,134 @@ LRESULT CALLBACK Customer_Info_Proc(HWND hWnd, UINT iMessage, WPARAM wParam, LPA
 		break;
 	}
 	return(DefWindowProc(hWnd, iMessage, wParam, lParam));
+}
+
+/*--------------------------------------------------------
+ Create_CI(): 현재 로그인한 손님 구조체 초기화
+--------------------------------------------------------*/
+CI* Create_CI() {
+	CI* N;
+
+	N = (CI*)malloc(sizeof(CI));
+
+	lstrcpy(N->ID, "");
+	N->RemainTime = 0;
+	N->State = FALSE;
+	
+	return N;
+}
+
+/*--------------------------------------------------------
+ Add_Customer(TCHAR*, int): 로그인 손님 정보 추가
+--------------------------------------------------------*/
+void Add_Customer(TCHAR* ID, int RemainTime) {
+	CI* N, *P;
+
+	N = Create_CI();
+	lstrcpy(N->ID, ID);
+	N->RemainTime = RemainTime;
+
+	P = C_I;
+
+	while (P->link != NULL) {
+		P = P->link;
+	}
+
+	P->link = N;
+}
+
+/*--------------------------------------------------------
+ Del_Customer(TCHAR*): 로그인 손님 정보 삭제
+--------------------------------------------------------*/
+void Del_Customer(TCHAR* ID) {
+	if (C_I->link != NULL) {
+		CI* E, * P;
+		P = C_I;
+
+		while (P->link != NULL) {
+			E = P;
+			P = P->link;
+			if (lstrcpy(P->ID, ID) == 0) {
+				E->link = P->link;
+				free(P);
+				break;
+			}
+		}
+	}
+}
+
+
+/*--------------------------------------------------------
+ User_State(const TCHAR*): 현재 로그인 되있는 아이디 인지
+ 확인
+--------------------------------------------------------*/
+BOOL User_State(const TCHAR* ID) {
+	if (C_I->link != NULL) {
+		CI* E, * P;
+		P = C_I;
+
+		while (P->link != NULL) {
+			E = P;
+			P = P->link;
+			if (lstrcpy(P->ID, ID) == 0) {
+				E->link = P->link;
+				return TRUE;
+			}
+		}
+	}
+	return FALSE;
+}
+
+/*--------------------------------------------------------
+ Get_Remain_hTime(TCHAR*): 현재 고객의 남은시간
+ 가져오기 <<서버 기준>>
+--------------------------------------------------------*/
+int Get_Remain_hTime(TCHAR* ID) {
+	if (C_I->link != NULL) {
+		CI *P = C_I;
+
+		while (P->link != NULL) {
+			P = P->link;
+			if (lstrcpy(P->ID, ID) == 0) {
+				return P->RemainTime;
+			}
+		}
+	}
+
+	return -1;
+}
+/*--------------------------------------------------------
+ Update_Remain_hTime(const TCHAR*, int): 고객 정보 구조체의
+ 남은 시간을 업데이트
+--------------------------------------------------------*/
+void Update_Remain_hTime(const TCHAR* ID, int Time) {
+	if (C_I->link != NULL) {
+		CI* P = C_I;
+
+		while (P->link != NULL) {
+			P = P->link;
+			if (lstrcpy(P->ID, ID) == 0) {
+				P->RemainTime = Time;
+			}
+		}
+	}
+}
+
+/*--------------------------------------------------------
+ Find_Customer_Info(TCHAR*): ID에 맞는 고객정보 구조체의
+ 주소를 리턴
+--------------------------------------------------------*/
+CI* Find_Customer_Info(TCHAR* ID) {
+	if (C_I->link != NULL) {
+		CI* P = C_I;
+
+		while (P->link != NULL) {
+			P = P->link;
+			if (lstrcpy(P->ID, ID) == 0) {
+				return P;
+			}
+		}
+	}
+
+	return NULL;
 }
