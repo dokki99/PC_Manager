@@ -1,6 +1,7 @@
 #include "Seat.h"
 
 extern MAP* hMap;
+extern SEAT* hSeat[MAX_SEAT];
 
 /*--------------------------------------------------------
  Create_MAP(): 매핑 구조체 초기화
@@ -26,7 +27,7 @@ void Add_MAP(SOCKET* Client_Sock, TCHAR* ID) {
 	N = Create_MAP();
 	
 	N->Client_Sock = Client_Sock;
-	N->Client_Info = Find_Customer_Info(ID);
+	Find_Customer_Info(N->Client_Info,ID);
 	
 	P = hMap;
 
@@ -42,13 +43,12 @@ void Add_MAP(SOCKET* Client_Sock, TCHAR* ID) {
 --------------------------------------------------------*/
 void Del_MAP(TCHAR* ID) {
 	if (hMap->link != NULL) {
-		MAP* E, * P;
-		P = hMap;
-
+		MAP* E, * P = hMap;
+		
 		while (P->link != NULL) {
 			E = P;
 			P = P->link;
-			if (lstrcpy(P->Client_Info->ID, ID) == 0) {
+			if (lstrcmp(P->Client_Info->ID, ID) == 0) {
 				E->link = P->link;
 				free(P);
 				break;
@@ -57,6 +57,45 @@ void Del_MAP(TCHAR* ID) {
 	}
 }
 
+/*--------------------------------------------------------
+ SOCKET* Find_Customer_Sock(TCHAR*): 고객 아이디에 맞는
+ SOCKET 주소를 반환 합니다.
+--------------------------------------------------------*/
+void Find_Customer_Sock(SOCKET* S,TCHAR* ID) {
+	if (hMap->link != NULL) {
+		MAP* P = hMap;
+		
+		while (P->link != NULL) {
+			P = P->link;
+			if (lstrcmp(P->Client_Info->ID, ID) == 0) {
+				S = P->Client_Sock;
+				break;
+			}
+		}
+	}
+
+}
+
+/*--------------------------------------------------------
+ Find_Seat_Num(TCHAR*): 좌석 번호 반환함수
+--------------------------------------------------------*/
+int Find_Seat_Num(TCHAR* ID) {
+	int i;
+
+	// 좌석에 앉아있는 고객이 찾는 고객일 경우 좌석번호 반환
+	for (i = 0; i < MAX_SEAT; i++) {
+		if (hSeat[i]->Client_S_I != NULL) {
+			if (hSeat[i]->Client_S_I->Client_Info->ID == ID) {
+				return hSeat[i]->S_num;
+			}
+		}
+	}
+
+	// 예외로 -1 리턴
+	return -1;
+
+
+}
 
 /*--------------------------------------------------------
  Create_SEAT(): 좌석 초기화 함수
@@ -69,7 +108,7 @@ SEAT* Create_SEAT() {
 
 	N->S_num = num++;
 	N->State = 0;
-	N->Client_S_I = Create_MAP();
+	N->Client_S_I = NULL;
 	N->Thread_ID = 0;
 
 	return N;

@@ -26,9 +26,8 @@ typedef struct {
 MAP* Create_MAP();					// 매핑 구조체 초기화
 void Add_MAP(SOCKET* ,TCHAR*);		// 매핑 구조체 추가(매핑)
 void Del_MAP(TCHAR*);				// 매핑 구조체 삭제(매핑 해제)
-SOCKET* Find_Customer_Sock(TCHAR*);	// 고객 아이디에 맞는 SOCKET 주소 반환
 
-
-
+void Find_Customer_Sock(SOCKET* ,TCHAR*);	// 고객 아이디에 맞는 SOCKET 주소 찾기
+int Find_Seat_Num(TCHAR*);					// 고객 아이디로 현재 고객이 앉아있는 자리를 찾고 반환
 SEAT* Create_SEAT();				// 좌석 초기화
 #endif
