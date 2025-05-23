@@ -40,7 +40,7 @@ HANDLE hThread;
 // 서버관련 변수/////////////////////////////////////////////
 
 BOOL CONN_ST = FALSE;						// 서버 오픈 상태
-const char g_szlpAddress[17] = "192.168.0.217";
+const char g_szlpAddress[17] = "127.0.0.1";
 const unsigned short g_uPort = 7878;		// 포트 넘버
 const int buflen = 4096;					// 버퍼 크기
 TCHAR buf[buflen];
@@ -96,7 +96,7 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR IpszCmd
 --------------------------------------------------------*/
 LRESULT CALLBACK MainWndProc(HWND hWnd, UINT iMessage, WPARAM wParam, LPARAM lParam) {
 	PAINTSTRUCT ps;
-	TCHAR TEXT[256],B_num[3],ID[30], PW[30];
+	TCHAR TEXT[256],B_num[10],ID[30], PW[30];
 	static HDC hdc;
 	static HBRUSH hBrush = NULL;
 
@@ -105,9 +105,9 @@ LRESULT CALLBACK MainWndProc(HWND hWnd, UINT iMessage, WPARAM wParam, LPARAM lPa
 		hWndMain = hWnd;
 		hBrush = CreateSolidBrush(RGB(218, 220, 214));
 		//// 현재 접속 유저 아이디 초기화
-		//lstrcpy(hUser_ID, "");
+		lstrcpy(hUser_ID, "");
 
-		/*
+		
 		// 소켓 초기화 (윈속 라이브러리 버전, 윈속 시스템 관련 정보)//////////////////////////////
 		nReturn = WSAStartup(WORD(2.0), &wsadata);
 
@@ -128,7 +128,7 @@ LRESULT CALLBACK MainWndProc(HWND hWnd, UINT iMessage, WPARAM wParam, LPARAM lPa
 		if (nReturn) {
 			MessageBox(hWndMain, "연결실패", "오류", MB_OK);
 		}
-		*/
+		
 
 		//////////////////////////////////////////////////////////////////////////////////////////
 
@@ -256,7 +256,7 @@ LRESULT CALLBACK MainWndProc(HWND hWnd, UINT iMessage, WPARAM wParam, LPARAM lPa
 		// brush 삭제
 		if (hBrush) DeleteObject(hBrush);
 		// 로그아웃 메세지 보내기
-		//nReturn = send(clientsock, "CFF", sizeof("CFF"), 0);
+		nReturn = send(clientsock, "CFF", sizeof("CFF"), 0);
 		// 접속 종료 (소캣 객체)
 		closesocket(clientsock);
 		// 윈속 해제

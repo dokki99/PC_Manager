@@ -1,47 +1,29 @@
 #include "Socket.h"
-#include "Process.h"
 
 // 소켓관련 변수/////////////////////////////////////////////
 
-extern SOCKET listensock;
 extern SOCKET clientsock;
-extern SOCKET hSocket;
-extern sockaddr_in addr_server;
 extern sockaddr_in addr_client;
 extern int addrlen_clt;
 extern int nReturn;
-extern WSADATA wsadata;
 extern CS* C_S;
-extern DWORD Send_TID;
+
+extern HWND hWndMain;		// 메인 화면 핸들
 /////////////////////////////////////////////////////////////
 
-// 서버관련 변수/////////////////////////////////////////////
+// 송수신 관련 변수/////////////////////////////////////////////
 
-extern BOOL CONN_ST;						// 서버 오픈 상태
-extern const unsigned short g_uPort;		// 포트 넘버
 extern const int buflen;					// 버퍼 크기
 extern TCHAR buf[];
 
-/////////////////////////////////////////////////////////////
-
-// 서버관련 변수/////////////////////////////////////////////
-
-extern SEAT* hSeat[MAX_SEAT];
-extern HANDLE Seat_Thread[MAX_SEAT];				
-extern HWND hWndMain;						// 메인 화면 핸들
+extern MQ* Message_Front, * Message_Rear;		// 메시지 처리 큐
+extern SQ* Send_Front, * Send_Rear;				// 송신 큐
 
 /////////////////////////////////////////////////////////////
 
-// 운영 및 동기화 관련 변수//////////////////////////////////
-
-extern SEAT* hSeat[MAX_SEAT];				// 좌석 구조체
-extern TCHAR Seat_Code[MAX_SEAT + 1];
-extern HANDLE Seat_Mutex[MAX_SEAT];			// 좌석 뮤택스
-extern HANDLE Charge_Mutex;					// 충전 뮤택스
+// 동기화 관련 변수//////////////////////////////////////////
 
 extern HANDLE Send_Mutex;					// 송신 뮤택스
-
-extern HANDLE Transform_Mutex;				// 가공 뮤택스
 
 /////////////////////////////////////////////////////////////
 
@@ -98,55 +80,6 @@ void delsock(SOCKET* S) {
 }
 
 /*--------------------------------------------------------
- SVR_Open(): 서버 오픈
---------------------------------------------------------*/
-void SVR_Open() {
-	int i;
-	HANDLE hThread;
-	DWORD ThreadID;
-
-	if (!CONN_ST) {
-		// 소켓 초기화 (윈속 라이브러리 버전, 윈속 시스템 관련 정보)
-		nReturn = WSAStartup(WORD(2.0), &wsadata);
-
-		// 소켓 생성 (IPv4: AF_INET | IPv6: AF_INET6 , 소켓 통신 타입, 프로토콜 결정)
-		listensock = socket(AF_INET, SOCK_STREAM, 0);
-
-		// 서버 주소 설정
-		addr_server.sin_family = AF_INET;
-		addr_server.sin_addr.s_addr = htons(INADDR_ANY);
-		addr_server.sin_port = htons(g_uPort);
-
-		// 소켓 바인드 (소켓 객체, 소객 객체에 부여할 주소 정보 구조체, 구조체 길이)
-		nReturn = bind(listensock, (sockaddr*)&addr_server, sizeof(sockaddr));
-
-		// 접속 대기 (소켓 객체, 연결 대기열 크기)
-		nReturn = listen(listensock, MAX_BACKLOG);
-
-		// 좌석 Relay 스레드 생성 (일단 대기 상태로 생성)
-		for (i = 0; i < MAX_SEAT; i++) {
-			Seat_Thread[i] = CreateThread(NULL, 0, Relay_Thread, &(hSeat[i]->S_num), CREATE_SUSPENDED, &(hSeat[i]->Thread_ID));
-		}
-
-		// Send 스레드 (3개) 생성 = 한번에 많은 요청이 들어와 송신 우선순위 큐에 지연이 발생할것을 고려
-		for (i = 0; i < MAX_SEND_THREAD; i++) {
-			CloseHandle(hThread = CreateThread(NULL, 0, Send_Thread, NULL, 0, &Send_TID));
-		}
-		
-		// accept 스레드 생성(recv스레드 다중생성)
-		CloseHandle(hThread = CreateThread(NULL, 0, Connect_Thread, &listensock, 0, &ThreadID));
-
-
-		//WSAAsyncSelect(listensock, hWndMain, WM_USER + 1, FD_ACCEPT | FD_READ | FD_CLOSE);
-
-		CONN_ST = TRUE;
-	}
-
-	InvalidateRect(hWndMain, NULL, FALSE);
-	MessageBox(hWndMain, "서버오픈완료", "알림", MB_OK);
-}
-
-/*--------------------------------------------------------
  Connect_Thread(LPVOID): 서버 연결 스레드
 --------------------------------------------------------*/
 DWORD WINAPI Connect_Thread(LPVOID Param) {
@@ -168,7 +101,7 @@ DWORD WINAPI Connect_Thread(LPVOID Param) {
 				S = S->link;
 			}
 
-			CloseHandle(hThread = CreateThread(NULL, 0, Recv_Thread, &(S->Sock), 0, &ThreadID));
+			CloseHandle(hThread = CreateThread(NULL, 0, Recv_Thread, S->Sock, 0, &ThreadID));
 		}
 
 	}
@@ -203,10 +136,7 @@ DWORD WINAPI Send_Thread(LPVOID Param) {
 --------------------------------------------------------*/
 DWORD WINAPI Recv_Thread(LPVOID Param) {
 	SOCKET* P = (SOCKET*)Param;
-	CI* F_CI;
-	CS* S;
-	TCHAR CODE[4], TEXT[256], ID[20], PWD[20], pNum[14], Send_TEXT[300], B_num[2];
-	int num = 0, RTime;
+	TCHAR CODE[4], TEXT[256];
 	
 	while (1) {
 		// 데이터 수신 (소캣 객체, 받을 문자열, 문자열 크기, 옵션);
@@ -214,147 +144,94 @@ DWORD WINAPI Recv_Thread(LPVOID Param) {
 
 		if (nReturn != 0 && nReturn != SOCKET_ERROR) {
 			Split_C_T(CODE, TEXT);
-			
-			if (lstrcmp(CODE, "C00") == 0) {
-				// 로그인 가능한지 확인
-				Split2(ID, PWD, TEXT);
-				// 고객 잔여 시간 DB에서 찾아 보내주기
-				if (Login_Info_Check(ID, PWD, 1) == TRUE && (RTime = Get_Time(ID)) != -1) {
-					Add_Customer(ID, RTime);
-					Add_MAP(P, ID);
-					wsprintf(TEXT, "%d", RTime);
-					lstrcpy(Send_TEXT, TEXT);
-				}
-				else {
-					lstrcpy(Send_TEXT, "FAIL");
-				}
-					
-				WaitForSingleObject(Transform_Mutex, INFINITE);
-				Transform_Text("S00", Send_TEXT, P);
-				ReleaseMutex(Transform_Mutex);
-			}
-			else if (lstrcmp(CODE, "C01") == 0) {
-				// 핸드폰 번호로 아이디 찾아서 보내주기
-				Find_ID(ID, pNum) != TRUE ?
-					lstrcpy(Send_TEXT, "FAIL") : lstrcpy(Send_TEXT, TEXT);
-				
-				WaitForSingleObject(Transform_Mutex, INFINITE);
-				Transform_Text("S01", Send_TEXT, P);
-				ReleaseMutex(Transform_Mutex);
-			}
-			else if (lstrcmp(CODE, "C02") == 0) {
-				// ID와 전화번호를 받고 PW초기화 시켜주기
-				Login_Info_Check(ID, pNum, 2) != TRUE || PWD_Reset(ID,pNum) != TRUE ?
-					lstrcpy(Send_TEXT, "FAIL") : lstrcpy(Send_TEXT, "비번이 초기화 되었습니다 123456789a");
-
-				WaitForSingleObject(Transform_Mutex, INFINITE);
-				Transform_Text("S02", Send_TEXT, P);
-				ReleaseMutex(Transform_Mutex);
-			}
-			else if (lstrcmp(CODE, "C03") == 0) {
-				// 회원가입 가능한지 확인 및 가입
-				Login_Info_Check(ID, pNum, 3) == TRUE || Regist_Customer(ID, PWD,pNum) != TRUE ?
-					lstrcpy(Send_TEXT, "FAIL") : lstrcpy(Send_TEXT, "회원가입이 완료되었습니다!!");
-				
-				WaitForSingleObject(Transform_Mutex, INFINITE);
-				Transform_Text("S03", Send_TEXT, P);
-				ReleaseMutex(Transform_Mutex);
-
-				// 이 과정에서 회원가입후 바로 로그인이 가능하게 할지 고민해보기
-			}
-			else if (lstrcmp(CODE,"C04") == 0) {				
-				// 접속한 클라이언트에게 현재 좌석 상태를 보내주기
-				WaitForSingleObject(Transform_Mutex, INFINITE);
-				Transform_Text("S04", "", P);
-				ReleaseMutex(Transform_Mutex);
-			}
-			else if (lstrcmp(CODE, "C05") == 0) {
-				// 좌석선점후 클라이언트에게 성공 실패여부 송신
-				num = atoi(TEXT);
-				WaitForSingleObject(Seat_Mutex[num - 1], INFINITE);
-				
-				if (hSeat[num - 1]->State == 0) {
-					// 좌석 선점 완료
-					// 좌석 구조체 나머지 값 연결해주기
-					hSeat[num - 1]->State = 1;
-					// hSeat[num - 1]->Client_Sock = P;
-					// hSeat[num - 1]->Client_Info 고객 정보 담아서 여기 넣어줍시다
-					// hSeat[num - 1]->Thread_ID 는 CreateThread 에서 이미 담겨져있습니다.
-					ResumeThread(Seat_Thread[num - 1]);	// 매칭된 스레드를 대기상태 해제 시켜줍니다.
-					// 이후에 주문/자리이동/시간추가와 같은 작업은 좌석스레드에서 해결됩니다.
-					lstrcpy(TEXT, "SUCCESS");
-				}
-				else {
-					// 좌석 선점 실패
-					lstrcpy(TEXT, "FAIL");
-				}
-				
-				Update_Seat_Code();			// 좌석 최신화
-
-				// 클라이언트 전체에 최신 좌석 정보 전송
-				if (lstrcmp(TEXT, "SUCCESS") == 0) {
-					S = C_S;
-					while (S->link != NULL) {
-						S = S->link;
-						Transform_Text("S04", TEXT, S->Sock);
-					}
-				}
-
-				// 좌석 선점 성공/실패 메시지 전송
-				Transform_Text("S05", TEXT, P);
-
-				ReleaseMutex(Seat_Mutex[num - 1]);
-			}
-			else if (lstrcmp(CODE, "C06") == 0) {
-				// 계정에 요금충전 (아직 좌석에 앉지않은 고객 대상)
-				// DB에 아이디 있는지 확인하고 현재 접속해 있는지 확인
-				// 충전 우선순위큐에 배치한다음 처리후 다시 통보
-				Split2(ID, B_num, TEXT);
-				if(Login_Info_Check(ID,"",3) == TRUE && User_State(ID) == TRUE) {
-					F_CI = Find_Customer_Info(ID);
-					WaitForSingleObject(Charge_Mutex, INFINITE);
-					Enque_CQ(F_CI, B_num);
-					ReleaseMutex(Charge_Mutex);
-				}
-				else {
-					// fail 처리
-					WaitForSingleObject(Send_Mutex, INFINITE);
-					Enque_SQ("FAIL", P);
-					ReleaseMutex(Send_Mutex);
-				}
-			}
-			
-		}
-		else {
-			MessageBox(hWndMain, "수신에러", "server", MB_OK);
-			return 0;
+			Enque_MQ(P, CODE, TEXT);
 		}
 	}
 	return 0;
 }
 
 /*--------------------------------------------------------
- SVR_Close(): 서버 종료
---------------------------------------------------------*/
-void SVR_Close() {
+ Split_C_T(TCHAR* CODE, TCHAR* TEXT) : 수신 받은 텍스트를
+ CODE와 TEXT로 분리하는 함수
+-------------------------------------------------------- */
+void Split_C_T(TCHAR* CODE, TCHAR* TEXT) {
 	int i;
-	CS* S;
 
-	// 좌석 스레드/뮤택스 핸들 반환
-	for (i = 0; i < MAX_SEAT; i++) {
-		CloseHandle(Seat_Thread[i]);
-		CloseHandle(Seat_Mutex[i]);
+	lstrcpy(CODE, "");
+	lstrcpy(TEXT, "");
+
+	for (i = 0; i < lstrlen(buf); i++) {
+		if (i < 3) {
+			CODE[i] = buf[i];
+		}
+		else if (i == 3) {
+			CODE[i] = '\0';
+		}
+		else if (i > 3) {
+			TEXT[i - 4] = buf[i];
+		}
 	}
 
-	// 송신 뮤택스 핸들 반환
-	CloseHandle(Send_Mutex);
-	
-	// 충전 뮤택스 핸들 반환
-	CloseHandle(Charge_Mutex);
-	
-	// 소켓정보 삭제
-	while (C_S->link != NULL) {
-		S = C_S->link;
-		delsock(S->Sock);
+	TEXT[i - 4] = '\0';
+}
+
+/*--------------------------------------------------------
+ Create_SQ(): 송신 큐 초기화 함수
+--------------------------------------------------------*/
+SQ* Create_SQ() {
+	SQ* N;
+
+	N = (SQ*)malloc(sizeof(SQ));
+
+	lstrcpy(N->TEXT, "");
+	N->Client_Sock = 0;
+	N->link = NULL;
+
+	return N;
+}
+
+/*--------------------------------------------------------
+ Enque_SQ(TCHAR* ,SOCKET): 송신 큐 엔큐
+--------------------------------------------------------*/
+void Enque_SQ(const TCHAR* TEXT, SOCKET* Client_Sock) {
+	SQ* N;
+
+	N = Create_SQ();
+	lstrcpy(N->TEXT, TEXT);
+	N->Client_Sock = Client_Sock;
+
+	if (Send_Front->link == NULL && Send_Rear->link == NULL) {
+		Send_Front->link = N;
+		Send_Rear->link = N;
 	}
+	else {
+		N->link = Send_Rear->link;
+		Send_Rear->link = N;
+	}
+}
+/*--------------------------------------------------------
+ Deque_SQ(): 송신 큐 디큐
+--------------------------------------------------------*/
+SQ* Deque_SQ() {
+	SQ* E, * N;
+
+	N = Create_SQ();
+
+	E = Send_Front->link;
+	*N = *E;
+
+	Send_Front = Send_Front->link;
+	if (Send_Front->link == NULL) {
+		Send_Rear->link = NULL;
+	}
+
+	free(E);
+	return N;
+}
+
+/*--------------------------------------------------------
+ IsEmpty_SQ(): 송신 큐 비었는지 확인하는 함수
+--------------------------------------------------------*/
+BOOL IsEmpty_SQ() {
+	return (((Send_Front->link == NULL) && (Send_Rear->link == NULL)) ? TRUE : FALSE);
 }

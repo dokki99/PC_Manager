@@ -36,6 +36,14 @@ HIMAGELIST Image;
 
 /////////////////////////////////////////////////////////////
 
+// 서버관련 함수/////////////////////////////////////////////
+
+void SVR_Open();							// 서버 오픈
+void SVR_Close();							// 서버 클로즈
+
+/////////////////////////////////////////////////////////////
+
+
 // 화면처리 관련 함수////////////////////////////////////////
 
 void OnTimer();								//타이머로 버퍼링
@@ -62,18 +70,20 @@ HWND Work_I_List;		// 근무 리스트뷰
 MAP* hMap;								// 매핑 구조체
 SEAT* hSeat[MAX_SEAT];					// 좌석 구조체
 
+HANDLE Message_Thread;					// 메시지 처리 스레드
 HANDLE Charge_Thread;					// 충전 스레드(충전 프로세스)
 HANDLE Charge_Mutex;					// 충전 뮤텍스
 
 HANDLE Seat_Thread[MAX_SEAT];			// 좌석 스레드
 HANDLE Seat_Mutex[MAX_SEAT];			// 좌석 뮤텍스
 
-HANDLE Send_Mutex;						// 송신 큐 INPUT 뮤택스
-HANDLE Transform_Mutex;					// 가공 뮤택스
+HANDLE Send_Mutex;						// 송신 뮤택스
 
-CQ *Charge_Front, *Charge_Rear;			// 충전 우선순위 큐
-SQ *Send_Front, *Send_Rear;				// 송신 우선순위 큐
+MQ *Message_Front, * Message_Rear;		// 메세지 처리 큐
+CQ *Charge_Front, *Charge_Rear;			// 충전 큐
+SQ *Send_Front, *Send_Rear;				// 송신 큐
 
+DWORD Message_TID;						// 메시지 처리 스레드 ID
 DWORD Charge_TID;						// 충전 스레드 ID
 DWORD Send_TID;							// 송신 스레드 ID
 
@@ -211,7 +221,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT iMessage, WPARAM wParam, LPARAM lParam)
 			return 0;
 		}
 
-		Local_Time = 0;								// 타이머 변수 초기화
+		Local_Time = 0;						// 타이머 변수 초기화
 		SetTimer(hWnd, LocalT, 1, NULL);	// 타이머 생성
 
 		WNDCLASS Wnd_S;
@@ -241,12 +251,16 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT iMessage, WPARAM wParam, LPARAM lParam)
 
 		C_S = Create_CS();
 		C_I = Create_CI();
-		
-		// 충전 우선순위 큐 초기화
+
+		// 메시지 큐 초기화
+		Message_Front = Create_MQ();
+		Message_Rear = Create_MQ();
+
+		// 충전 큐 초기화
 		Charge_Front = Create_CQ();
 		Charge_Rear = Create_CQ();
 
-		// 송신 우선순위 큐 초기화
+		// 송신 큐 초기화
 		Send_Front = Create_SQ();
 		Send_Rear = Create_SQ();
 
@@ -257,11 +271,9 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT iMessage, WPARAM wParam, LPARAM lParam)
 		// 송신 뮤택스 생성
 		Send_Mutex = CreateMutex(NULL, FALSE, NULL);
 		if (Send_Mutex == NULL) return 0;
-		
 
-		// 가공 뮤택스 생성
-		Transform_Mutex = CreateMutex(NULL, FALSE, NULL);
-		if (Transform_Mutex == NULL) return 0;
+		// 메시지 처리 프로세스 생성
+		Message_Thread = CreateThread(NULL, 0, Message_Process, NULL, 0, &Message_TID);
 
 		// 충전 프로세스 생성
 		Charge_Thread = CreateThread(NULL, 0, Charge_Process, NULL, 0, &Charge_TID);
@@ -353,6 +365,82 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT iMessage, WPARAM wParam, LPARAM lParam)
 		return 0;
 	}
 	return(DefWindowProc(hWnd, iMessage, wParam, lParam));
+}
+
+/*--------------------------------------------------------
+ SVR_Open(): 서버 오픈
+--------------------------------------------------------*/
+void SVR_Open() {
+	int i;
+	HANDLE hThread;
+	DWORD ThreadID;
+
+	if (!CONN_ST) {
+		// 소켓 초기화 (윈속 라이브러리 버전, 윈속 시스템 관련 정보)
+		nReturn = WSAStartup(WORD(2.0), &wsadata);
+
+		// 소켓 생성 (IPv4: AF_INET | IPv6: AF_INET6 , 소켓 통신 타입, 프로토콜 결정)
+		listensock = socket(AF_INET, SOCK_STREAM, 0);
+
+		// 서버 주소 설정
+		addr_server.sin_family = AF_INET;
+		addr_server.sin_addr.s_addr = htons(INADDR_ANY);
+		addr_server.sin_port = htons(g_uPort);
+
+		// 소켓 바인드 (소켓 객체, 소객 객체에 부여할 주소 정보 구조체, 구조체 길이)
+		nReturn = bind(listensock, (sockaddr*)&addr_server, sizeof(sockaddr));
+
+		// 접속 대기 (소켓 객체, 연결 대기열 크기)
+		nReturn = listen(listensock, MAX_BACKLOG);
+
+		// 좌석 Relay 스레드 생성 (일단 대기 상태로 생성)
+		for (i = 0; i < MAX_SEAT; i++) {
+			Seat_Thread[i] = CreateThread(NULL, 0, Relay_Thread, &(hSeat[i]->S_num), CREATE_SUSPENDED, &(hSeat[i]->Thread_ID));
+		}
+
+		// Send 스레드 (3개) 생성 = 한번에 많은 요청이 들어와 송신 큐에 지연이 발생할것을 고려
+		for (i = 0; i < MAX_SEND_THREAD; i++) {
+			CloseHandle(hThread = CreateThread(NULL, 0, Send_Thread, NULL, 0, &Send_TID));
+		}
+
+		// accept 스레드 생성(recv스레드 다중생성)
+		CloseHandle(hThread = CreateThread(NULL, 0, Connect_Thread, &listensock, 0, &ThreadID));
+
+
+		//WSAAsyncSelect(listensock, hWndMain, WM_USER + 1, FD_ACCEPT | FD_READ | FD_CLOSE);
+
+		CONN_ST = TRUE;
+	}
+
+	InvalidateRect(hWndMain, NULL, FALSE);
+	MessageBox(hWndMain, "서버오픈완료", "알림", MB_OK);
+}
+
+
+/*--------------------------------------------------------
+ SVR_Close(): 서버 종료
+--------------------------------------------------------*/
+void SVR_Close() {
+	int i;
+	CS* S;
+
+	// 좌석 스레드/뮤택스 핸들 반환
+	for (i = 0; i < MAX_SEAT; i++) {
+		CloseHandle(Seat_Thread[i]);
+		CloseHandle(Seat_Mutex[i]);
+	}
+
+	// 송신 뮤택스 핸들 반환
+	CloseHandle(Send_Mutex);
+
+	// 충전 뮤택스 핸들 반환
+	CloseHandle(Charge_Mutex);
+
+	// 소켓정보 삭제
+	while (C_S->link != NULL) {
+		S = C_S->link;
+		delsock(S->Sock);
+	}
 }
 
 /*--------------------------------------------------------

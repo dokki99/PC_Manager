@@ -169,19 +169,18 @@ void Update_Remain_hTime(const TCHAR* ID, int Time) {
 
 /*--------------------------------------------------------
  Find_Customer_Info(TCHAR*): ID에 맞는 고객정보 구조체의
- 주소를 리턴
+ 주소를 찾는다
 --------------------------------------------------------*/
-CI* Find_Customer_Info(TCHAR* ID) {
+void Find_Customer_Info(CI* F_CI,TCHAR* ID) {
 	if (C_I->link != NULL) {
 		CI* P = C_I;
 
 		while (P->link != NULL) {
 			P = P->link;
 			if (lstrcpy(P->ID, ID) == 0) {
-				return P;
+				F_CI = P;
+				break;
 			}
 		}
 	}
-
-	return NULL;
 }
