@@ -123,7 +123,7 @@ LRESULT CALLBACK MainWndProc(HWND hWnd, UINT iMessage, WPARAM wParam, LPARAM lPa
 		lstrcpy(hUser_ID, "");
 
 		// 서버에 연결
-		//Connect_Server();
+		Connect_Server();
 		
 		//////////////////////////////////////////////////////////////////////////////////////////
 
