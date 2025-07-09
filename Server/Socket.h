@@ -1,53 +1,56 @@
 #ifndef __SOKET_H__
 #define __SOKET_H__
-
 #include "Common.h"
 
-
-// 현재 접속 클라이언트 소켓정보
-typedef struct Client_Sock {
-	SOCKET* Sock;			// 클라이언트 소켓
-	Client_Sock* link;		// 링크 정보
-}CS;
+// 현재 접속 클라이언트 연결정보
+typedef struct Client_Connect_Info {
+	SOCKET Sock;						// 클라이언트 소켓
+	HANDLE Thread_Info;					// 클라이언트 스레드
+	DWORD Thread_ID;					// 클라이언트 스레드 아이디
+	struct Client_Connect_Info* link;	// 링크 정보
+}CCI;
 
 // 메시지 처리 큐
 typedef struct Message_Queue {
-	SOCKET* Client_Sock;		// 소켓정보
-	TCHAR CODE[4];				// 코드
-	TCHAR TEXT[256];			// 텍스트
-	Message_Queue* link;		// 링크
+	SOCKET Client_Sock;				// 소켓정보
+	TCHAR CODE[4];					// 코드
+	TCHAR TEXT[256];				// 텍스트
+	struct Message_Queue* link;		// 링크
 }MQ;
 
 // 송신 큐
 typedef struct Send_Queue {
-	TCHAR TEXT[300];			// 클라이언트로 보낼 텍스트
-	SOCKET* Client_Sock;		// 소켓정보
-	Send_Queue* link;			// 링크
+	TCHAR TEXT[300];				// 클라이언트로 보낼 텍스트
+	SOCKET Client_Sock;				// 소켓정보
+	struct Send_Queue* link;		// 링크
 }SQ;
 
 // 소켓 관련 함수////////////////////////////////////////////////////////////
 
-CS* Create_CS();						// 소켓 구조체 초기화
-void addsock(SOCKET*);					// 소켓 정보 추가
-void delsock(SOCKET*);					// 소켓 정보 삭제
+CCI* Create_CCI();							// 소켓 구조체 초기화
+void Add_CCI_Sock(SOCKET);					// 소켓 정보 추가
+void Add_CCI_Thread(SOCKET,HANDLE,DWORD);	// 스레드 정보 추가
+SOCKET* Find_CCI(SOCKET);					// 구조체에 닮긴 소켓주소 리턴
+
+void Del_CCI(SOCKET);					// 소켓 정보 삭제
 
 //////////////////////////////////////////////////////////////////////////////////
 
 // 소켓관련 함수//////////////////////////////////////////////////////////////////
 
-DWORD WINAPI Connect_Thread(LPVOID);						// 서버 연결 스레드
-DWORD WINAPI Send_Thread(LPVOID);							// 송신 스레드
+DWORD WINAPI Connect_Process(LPVOID);						// 서버 연결 스레드
+DWORD WINAPI Send_Process(LPVOID);							// 송신 스레드
 DWORD WINAPI Recv_Thread(LPVOID);							// 수신 스레드
 
-void Transform_Text(const TCHAR*, const TCHAR* , SOCKET *);	// 텍스트 송신
-void Split_C_T(TCHAR*, TCHAR*);								// 코드-텍스트 분할
+void Transform_Text(const TCHAR*, const TCHAR* , SOCKET );	// 텍스트 송신
+void Split_C_T(TCHAR*, TCHAR*, TCHAR*);								// 코드-텍스트 분할
 
 ////////////////////////////////////////////////////////////////////////
  
 // 메시지 처리 큐 함수 /////////////////////////
 
 MQ* Create_MQ();
-void Enque_MQ(SOCKET*, const TCHAR*, const TCHAR*);
+void Enque_MQ(SOCKET, const TCHAR*, const TCHAR*);
 MQ* Deque_MQ();
 BOOL IsEmpty_MQ();
 
@@ -56,7 +59,7 @@ BOOL IsEmpty_MQ();
 // 송신 큐 함수 ////////////////////////////////
 
 SQ* Create_SQ();
-void Enque_SQ(const TCHAR*, SOCKET*);
+void Enque_SQ(const TCHAR*, SOCKET);
 SQ* Deque_SQ();
 BOOL IsEmpty_SQ();
 

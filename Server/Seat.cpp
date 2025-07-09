@@ -1,7 +1,7 @@
 #include "Seat.h"
 
-extern MAP* hMap;
-extern SEAT* hSeat[MAX_SEAT];
+extern MAP *hMap;
+extern SEAT **hSeat;
 
 /*--------------------------------------------------------
  Create_MAP(): 매핑 구조체 초기화
@@ -19,9 +19,9 @@ MAP* Create_MAP() {
 }
 
 /*--------------------------------------------------------
- Add_MAP(TCHAR* ,SOCKET*): 매핑 구조체 추가(매핑)
+ Add_MAP(SOCKET, TCHAR*): 매핑 구조체 추가(매핑)
 --------------------------------------------------------*/
-void Add_MAP(SOCKET* Client_Sock, TCHAR* ID) {
+void Add_MAP(SOCKET Client_Sock, TCHAR* ID) {
 	MAP* N, *P;
 
 	N = Create_MAP();
@@ -61,7 +61,7 @@ void Del_MAP(TCHAR* ID) {
  SOCKET* Find_Customer_Sock(TCHAR*): 고객 아이디에 맞는
  SOCKET 주소를 반환 합니다.
 --------------------------------------------------------*/
-void Find_Customer_Sock(SOCKET* S,TCHAR* ID) {
+void Find_Customer_Sock(SOCKET S,TCHAR* ID) {
 	if (hMap->link != NULL) {
 		MAP* P = hMap;
 		
@@ -107,7 +107,8 @@ SEAT* Create_SEAT() {
 	N = (SEAT*)malloc(sizeof(SEAT));
 
 	N->S_num = num++;
-	N->State = 0;
+	N->S_State = 0;
+	N->P_State = 0;
 	N->Client_S_I = NULL;
 	N->Thread_ID = 0;
 

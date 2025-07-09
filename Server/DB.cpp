@@ -353,13 +353,13 @@ BOOL Login_Info_Check(const TCHAR* ID, const TCHAR* Data, int state) {
 	lstrcpy(Query, "select COUNT(*) from dbo.Customer_Info where C_ID = '");
 	lstrcat(Query, ID);
 	if (state == 1) {
-		lstrcat(Query, "' AND C_PWD = '");
+		lstrcat(Query, "' AND C_PWD = '");			// 로그인
 	}
 	else if(state == 2) {
-		lstrcat(Query, "' AND C_Phone = '");
+		lstrcat(Query, "' AND C_Phone = '");		// 비밀번호 초기화
 	}
 	else if (state == 3) {
-		lstrcat(Query, "' OR C_Phone = '");				// 요금충전일 경우에는
+		lstrcat(Query, "' OR C_Phone = '");			// 회원가입 및 요금충전
 	}
 	lstrcat(Query, Data);
 	lstrcat(Query, "'");

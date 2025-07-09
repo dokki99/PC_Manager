@@ -67,41 +67,58 @@ HWND Work_I_List;		// 근무 리스트뷰
 
 // 운영 및 동기화 관련 변수//////////////////////////////////
 
-MAP* hMap;								// 매핑 구조체
-SEAT* hSeat[MAX_SEAT];					// 좌석 구조체
+MAP *hMap;											// 매핑 구조체
+SEAT **hSeat;										// 좌석 구조체
 
-HANDLE Message_Thread;					// 메시지 처리 스레드
-HANDLE Charge_Thread;					// 충전 스레드(충전 프로세스)
-HANDLE Charge_Mutex;					// 충전 뮤텍스
+HANDLE Message_Thread[MAX_MESSAGE_THREAD];			// 메시지 처리 스레드
+HANDLE Message_Mutex;								// 메시지 처리 뮤택스
 
-HANDLE Seat_Thread[MAX_SEAT];			// 좌석 스레드
-HANDLE Seat_Mutex[MAX_SEAT];			// 좌석 뮤텍스
+HANDLE Charge_Thread;								// 충전 스레드(충전 프로세스)
+HANDLE Charge_Mutex;								// 충전 뮤텍스
 
-HANDLE Send_Mutex;						// 송신 뮤택스
+HANDLE Seat_Thread[MAX_SEAT];						// 좌석 스레드
+HANDLE Seat_Mutex[MAX_SEAT];						// 좌석 뮤텍스
 
-MQ *Message_Front, * Message_Rear;		// 메세지 처리 큐
-CQ *Charge_Front, *Charge_Rear;			// 충전 큐
-SQ *Send_Front, *Send_Rear;				// 송신 큐
+HANDLE Order_Thread;								// 주문 스레드
+HANDLE Order_Mutex;									// 주문 뮤택스
 
-DWORD Message_TID;						// 메시지 처리 스레드 ID
-DWORD Charge_TID;						// 충전 스레드 ID
-DWORD Send_TID;							// 송신 스레드 ID
+HANDLE *Order_Sub_Thread;							// 주문 처리 스레드
+HANDLE *Order_Sub_Mutex;							// 주문 처리 뮤택스
+
+HANDLE Connect_Thread;								// 서버 연결 스레드
+
+HANDLE Send_Thread[MAX_SEND_THREAD];				// 송신 스레드
+HANDLE Send_Mutex;									// 송신 뮤택스
+
+MQ *Message_Front, *Message_Rear;					// 메세지 처리 큐
+CQ *Charge_Front, *Charge_Rear;						// 충전 큐
+SQ *Send_Front, *Send_Rear;							// 송신 큐
+SEAT_M_Q **Seat_Message_Front, **Seat_Message_Rear;	// 좌석 메시지 큐
+OQ* Order_Front, * Order_Rear;						// 주문 큐
+OSQ **Order_Sub_Front, **Order_Sub_Rear;			// 주문 서브 큐
+
+DWORD Message_TID[MAX_MESSAGE_THREAD];				// 메시지 처리 스레드 ID
+DWORD Order_TID;									// 주문 스레드 ID
+DWORD *Order_Sub_TID;								// 주문 처리 스레드 ID
+DWORD Charge_TID;									// 충전 스레드 ID
+DWORD Send_TID[MAX_SEND_THREAD];					// 송신 스레드 ID
+DWORD Connect_TID;									// 서버 연결 스레드 ID
 
 int Local_Time;							// 60초 타이머 변수
-
+int* Order_Sub_Num;						// 주문 처리 스레드 식별번호
 /////////////////////////////////////////////////////////////
 
 // 소켓관련 변수/////////////////////////////////////////////
 
 SOCKET listensock;
-SOCKET clientsock = 0;
-SOCKET hSocket = 0;
+SOCKET clientsock = INVALID_SOCKET;
+SOCKET hSocket = INVALID_SOCKET;
 sockaddr_in addr_server;
 sockaddr_in addr_client;
 int addrlen_clt = sizeof(sockaddr);
 int nReturn;
 WSADATA wsadata;
-CS* C_S;										// 현재 접속 클라이언트 정보
+CCI* C_CI;										// 현재 접속 클라이언트 연결 정보
 CI* C_I;										// 현재 접속 고객 정보
 TCHAR Seat_Code[MAX_SEAT+1] = "";				// 좌석 현황 코드
 
@@ -111,8 +128,6 @@ TCHAR Seat_Code[MAX_SEAT+1] = "";				// 좌석 현황 코드
 
 BOOL CONN_ST = FALSE;						// 서버 오픈 상태
 extern const unsigned short g_uPort = 7878;		// 포트 넘버
-extern const int buflen = 4096;					// 버퍼 크기
-TCHAR buf[buflen];
 
 /////////////////////////////////////////////////////////////
 
@@ -241,15 +256,17 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT iMessage, WPARAM wParam, LPARAM lParam)
 		// 근무기록 윈도우 설정
 		Init_Wnd(&Wnd_W, 4);
 		
-
 		hMap = Create_MAP();
 
 		// 초기화 단계
+		// 추후에 좌석 확장을 위하여 이중포인터로 생성
+		hSeat = (SEAT**)malloc(MAX_SEAT * sizeof(SEAT*));
+
 		for (int i = 0; i < MAX_SEAT; i++) {
 			hSeat[i] = Create_SEAT();			// 좌석 초기화 30좌석 (나중에 가변으로 바꿀수있어야됌)
 		}
 
-		C_S = Create_CS();
+		C_CI = Create_CCI();
 		C_I = Create_CI();
 
 		// 메시지 큐 초기화
@@ -264,6 +281,45 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT iMessage, WPARAM wParam, LPARAM lParam)
 		Send_Front = Create_SQ();
 		Send_Rear = Create_SQ();
 
+		// 좌석 메시지 큐 초기화
+		Seat_Message_Front = (SEAT_M_Q**)malloc(MAX_SEAT * sizeof(SEAT_M_Q*));
+		Seat_Message_Rear = (SEAT_M_Q**)malloc(MAX_SEAT * sizeof(SEAT_M_Q*));
+
+
+		for (int i = 0; i < MAX_SEAT; i++) {
+			Seat_Message_Front[i] = Create_SEAT_M_Q();
+			Seat_Message_Rear[i] = Create_SEAT_M_Q();
+		}
+
+		// 주문 프로세스 생성
+		Order_Thread = CreateThread(NULL, 0, Order_Process, NULL, 0, &Order_TID);
+		
+		// 주문 큐 초기화
+		Order_Front = Create_OQ();
+		Order_Rear = Create_OQ();
+		
+		// 주문 서브 큐 초기화(추후 메뉴확장을 위해 이중포인터로 작성)
+		Order_Sub_Front = (OSQ**)malloc(MAX_MENU * sizeof(OSQ*));
+		Order_Sub_Rear = (OSQ**)malloc(MAX_MENU * sizeof(OSQ*));
+
+		for (int i = 0; i < MAX_MENU; i++) {
+			Order_Sub_Front[i] = Create_OSQ();
+			Order_Sub_Rear[i] = Create_OSQ();
+		}
+
+		// 주문 처리 프로세스 생성(확장 예정)
+		Order_Sub_Thread = (HANDLE*)malloc(MAX_MENU * sizeof(HANDLE));
+		Order_Sub_Mutex = (HANDLE*)malloc(MAX_MENU * sizeof(HANDLE));
+		Order_Sub_TID = (DWORD*)calloc(MAX_MENU, sizeof(DWORD));
+		Order_Sub_Num = (int*)calloc(MAX_MENU, sizeof(int));
+
+		for (int i = 0; i < MAX_MENU; i++) {
+			Order_Sub_Num[i] = i;
+			Order_Sub_Thread[i] = CreateThread(NULL, 0, Order_Sub_Process, &Order_Sub_Num[i], 0, &Order_Sub_TID[i]);
+			Order_Sub_Mutex[i] = CreateMutex(NULL, FALSE, NULL);
+			if (Order_Sub_Mutex[i] == NULL) return 0;
+		}
+
 		// 충전 뮤텍스 생성
 		Charge_Mutex = CreateMutex(NULL, FALSE, NULL);
 		if (Charge_Mutex == NULL) return 0;
@@ -272,9 +328,10 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT iMessage, WPARAM wParam, LPARAM lParam)
 		Send_Mutex = CreateMutex(NULL, FALSE, NULL);
 		if (Send_Mutex == NULL) return 0;
 
-		// 메시지 처리 프로세스 생성
-		Message_Thread = CreateThread(NULL, 0, Message_Process, NULL, 0, &Message_TID);
-
+		// 메세지 처리 뮤택스 생성
+		Message_Mutex = CreateMutex(NULL, FALSE, NULL);
+		if (Message_Mutex == NULL) return 0;
+		
 		// 충전 프로세스 생성
 		Charge_Thread = CreateThread(NULL, 0, Charge_Process, NULL, 0, &Charge_TID);
 
@@ -287,7 +344,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT iMessage, WPARAM wParam, LPARAM lParam)
 			}
 		}
 
-		Update_Seat_Code();
+		Update_Seat_Code();	// 좌석 정보 업데이트
 
 		// 좌석 뮤텍스 생성
 		for (int i = 0; i < MAX_SEAT; i++) {
@@ -372,8 +429,6 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT iMessage, WPARAM wParam, LPARAM lParam)
 --------------------------------------------------------*/
 void SVR_Open() {
 	int i;
-	HANDLE hThread;
-	DWORD ThreadID;
 
 	if (!CONN_ST) {
 		// 소켓 초기화 (윈속 라이브러리 버전, 윈속 시스템 관련 정보)
@@ -400,12 +455,16 @@ void SVR_Open() {
 
 		// Send 스레드 (3개) 생성 = 한번에 많은 요청이 들어와 송신 큐에 지연이 발생할것을 고려
 		for (i = 0; i < MAX_SEND_THREAD; i++) {
-			CloseHandle(hThread = CreateThread(NULL, 0, Send_Thread, NULL, 0, &Send_TID));
+			Send_Thread[i] = CreateThread(NULL, 0, Send_Process, NULL, 0, &Send_TID[i]);
 		}
 
-		// accept 스레드 생성(recv스레드 다중생성)
-		CloseHandle(hThread = CreateThread(NULL, 0, Connect_Thread, &listensock, 0, &ThreadID));
+		// Connect 스레드 생성(recv스레드 다중생성)
+		Connect_Thread = CreateThread(NULL, 0, Connect_Process, &listensock, 0, &Connect_TID);
 
+		// 메시지 처리 프로세스 생성 (3개) 생성
+		for (i = 0; i < MAX_MESSAGE_THREAD; i++) {
+			Message_Thread[i] = CreateThread(NULL, 0, Message_Process, NULL, 0, &Message_TID[i]);
+		}
 
 		//WSAAsyncSelect(listensock, hWndMain, WM_USER + 1, FD_ACCEPT | FD_READ | FD_CLOSE);
 
@@ -421,14 +480,124 @@ void SVR_Open() {
  SVR_Close(): 서버 종료
 --------------------------------------------------------*/
 void SVR_Close() {
-	int i;
-	CS* S;
+	MAP* M;
+	CCI* L_CI;
+	CI* I;
 
-	// 좌석 스레드/뮤택스 핸들 반환
-	for (i = 0; i < MAX_SEAT; i++) {
-		CloseHandle(Seat_Thread[i]);
-		CloseHandle(Seat_Mutex[i]);
+	// 서버 연결 해제(서버내 에서 돌고 있는 스레드는 모두 종료됨)
+	CONN_ST = FALSE;
+
+	// 스레드 종료 대기
+	WaitForMultipleObjects(MAX_MESSAGE_THREAD, Message_Thread, TRUE, INFINITE);		// 메시지 처리 스레드
+	WaitForSingleObject(Charge_Thread, INFINITE);									// 충전 스레드(충전 프로세스)
+	for (int i = 0; i < MAX_SEAT; i++) {
+		if (hSeat[i]->S_State == 0) {
+			ResumeThread(Seat_Thread[i]);
+		}
 	}
+	WaitForMultipleObjects(MAX_SEAT, Seat_Thread, TRUE, INFINITE);					// 좌석 스레드
+	WaitForSingleObject(Order_Thread, INFINITE);									// 주문 스레드
+	WaitForMultipleObjects(MAX_SEND_THREAD, Send_Thread, TRUE, INFINITE);			// 송신 스레드
+	WaitForMultipleObjects(MAX_MENU, Order_Sub_Thread, TRUE, INFINITE);				// 주문 스레드
+
+	closesocket(listensock);
+	WaitForSingleObject(Connect_Thread, INFINITE);									// 주문 스레드
+
+	// 리시브 스레드 | 현재 접속 소켓정보 삭제
+	L_CI = C_CI;
+	while (C_CI->link != NULL) {
+		L_CI = L_CI->link;
+		Del_CCI(L_CI->Sock);
+	}
+	free(C_CI);
+
+	// 주문처리 프로세스 할당해제		
+	for (int i = 0; i < MAX_MENU; i++) {
+		if (Order_Sub_Thread[i]) {
+			CloseHandle(Order_Sub_Thread[i]);
+			CloseHandle(Order_Sub_Mutex[i]);
+		}
+	}
+	free(Order_Sub_Thread);
+	free(Order_Sub_TID);
+	free(Order_Sub_Num);
+
+	// 좌석 스레드 / 뮤택스 / 메모리 해제
+	for (int i = 0; i < MAX_SEAT; i++) {
+		if (Seat_Thread[i]) {
+			CloseHandle(Seat_Thread[i]);
+			CloseHandle(Seat_Mutex[i]);
+			free(hSeat[i]);
+		}
+	}
+	free(hSeat);
+	
+	// 좌석 메시지 큐 할당해제 
+	for (int i = 0; i < MAX_SEAT; i++) {
+		while (!IsEmpty_SEAT_M_Q(i + 1)) {
+			Deque_SEAT_M_Q(i + 1);
+		}
+		free(Seat_Message_Front[i]);
+		free(Seat_Message_Rear[i]);
+	}
+	free(Seat_Message_Front);
+	free(Seat_Message_Rear);
+
+	// 충전 큐 할당 해제
+	while (!IsEmpty_CQ()) {
+		Deque_CQ();
+	}
+	free(Charge_Front);
+	free(Charge_Rear);
+
+	// 매핑 및 메모리 해제
+	while (hMap->link != NULL) {
+		M = hMap;
+		hMap = hMap->link;
+		free(M);
+	}
+	free(hMap);
+
+	// 메세지 처리 큐 할당해제
+	while (!IsEmpty_MQ()) {
+		Deque_MQ();
+	}
+
+	// 송신 큐 할당 해제
+	while (!IsEmpty_SQ()) {
+		Deque_SQ();
+	}
+	free(Send_Front);
+	free(Send_Rear);
+
+	// 현재 접속 고객정보 삭제
+	while (C_I->link != NULL) {
+		I = C_I;
+		C_I = C_I->link;
+		free(I);
+	}
+	free(C_I);
+
+	// 주문 서브 큐 핸들 반환
+	for (int i = 0; i < MAX_MENU; i++) {
+		while (!IsEmpty_OSQ(i)) {
+			Deque_OSQ(i);
+		}
+		free(Order_Sub_Front[i]);
+		free(Order_Sub_Rear[i]);
+	}
+	free(Order_Sub_Front);
+	free(Order_Sub_Rear);
+
+	// 주문 큐 할당 해제
+	while (!IsEmpty_OQ()) {
+		Deque_OQ();
+	}
+	free(Order_Front);
+	free(Order_Rear);
+
+	// 주문 프로세스 할당해제
+	CloseHandle(Order_Thread);
 
 	// 송신 뮤택스 핸들 반환
 	CloseHandle(Send_Mutex);
@@ -436,11 +605,21 @@ void SVR_Close() {
 	// 충전 뮤택스 핸들 반환
 	CloseHandle(Charge_Mutex);
 
-	// 소켓정보 삭제
-	while (C_S->link != NULL) {
-		S = C_S->link;
-		delsock(S->Sock);
+	// 충전 스레드 핸들 반환
+	CloseHandle(Charge_Thread);
+
+	// 메시지 처리 뮤택스 핸들 반환
+	for (int i = 0; i < MAX_MESSAGE_THREAD; i++) {
+		CloseHandle(Message_Thread[i]);
 	}
+
+	
+
+	for (int i = 0; i < MAX_SEND_THREAD; i++) {
+		CloseHandle(Send_Thread[i]);
+	}
+
+	CloseHandle(Connect_Thread);
 }
 
 /*--------------------------------------------------------

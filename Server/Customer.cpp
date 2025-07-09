@@ -3,7 +3,7 @@
 extern HINSTANCE g_hInst;
 extern HWND hWndMain;		// 메인 화면 핸들
 extern HWND Customer_I_List;	// 회원 리스트뷰
-extern CI* C_I;
+extern CI *C_I;
 
 /*--------------------------------------------------------
  Customer_Info_Proc: 회원정보 프로시저
@@ -67,7 +67,8 @@ CI* Create_CI() {
 	lstrcpy(N->ID, "");
 	N->RemainTime = 0;
 	N->State = FALSE;
-	
+	N->link = NULL;
+
 	return N;
 }
 

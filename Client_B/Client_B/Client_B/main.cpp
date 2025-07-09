@@ -4,18 +4,31 @@
 #define MAX_SEAT 30
 
 LRESULT CALLBACK MainWndProc(HWND, UINT, WPARAM, LPARAM);
+LRESULT CALLBACK EditOnlyNumProc(HWND, UINT, WPARAM, LPARAM);
+LRESULT CALLBACK EditOnlyAlphaNumProc(HWND, UINT, WPARAM, LPARAM);
+BOOL CALLBACK Find_ID_DlgProc(HWND, UINT, WPARAM, LPARAM);
+BOOL CALLBACK Find_PW_DlgProc(HWND, UINT, WPARAM, LPARAM);
+BOOL CALLBACK Join_DlgProc(HWND, UINT, WPARAM, LPARAM);
 BOOL CALLBACK SeatDlgProc(HWND, UINT, WPARAM, LPARAM);
 DWORD WINAPI Recv_Thread(LPVOID);
 
+void Connect_Server();
 void Split_C_T(TCHAR*, TCHAR*);
 void Update_Seat(TCHAR*);
 void Change_Screen();
+void SetHangulMode(HWND, BOOL);
 void Send_Text(const char*, const char*);
 
 HINSTANCE g_hInst;
 LPCTSTR MainClass = TEXT("PC Client");
 
 HWND hWndMain;		// 메인 화면 핸들
+HWND hWndFind_PW;	// 비밀번호 찾기 다이얼로그 핸들
+HWND hWndJoin;		// 가입 다이얼로그 핸들
+
+WNDPROC Edit_Phone_Proc = NULL;	// 핸드폰 에디트 커스텀 프로시저
+WNDPROC Edit_ID_Proc = NULL;	// ID 에디트 커스텀 프로시저
+WNDPROC Edit_PW_Proc = NULL;	// PW 에디트 커스텀 프로시저
 
 // 화면처리 관련 변수////////////////////////////////////////
 
@@ -109,29 +122,9 @@ LRESULT CALLBACK MainWndProc(HWND hWnd, UINT iMessage, WPARAM wParam, LPARAM lPa
 		//// 현재 접속 유저 아이디 초기화
 		lstrcpy(hUser_ID, "");
 
+		// 서버에 연결
+		//Connect_Server();
 		
-		// 소켓 초기화 (윈속 라이브러리 버전, 윈속 시스템 관련 정보)//////////////////////////////
-		nReturn = WSAStartup(WORD(2.0), &wsadata);
-
-		// 소켓 생성 (IPv4: AF_INET | IPv6: AF_INET6 , 소켓 통신 타입, 프로토콜 결정)
-		clientsock = socket(AF_INET, SOCK_STREAM, 0);
-
-		addr_client.sin_family = AF_INET;
-		addr_client.sin_addr.s_addr = inet_addr(g_szlpAddress);
-		addr_client.sin_port = htons(g_uPort);
-
-		// 서버 연결
-		nReturn = connect(clientsock, (sockaddr*)&addr_client, addrlen_clt);
-
-		// 수신 스레드 생성
-		hThread = CreateThread(NULL, 0, Recv_Thread, &clientsock, 0, &ThreadID);
-		CloseHandle(hThread);
-
-		if (nReturn) {
-			MessageBox(hWndMain, "연결실패", "오류", MB_OK);
-		}
-		
-
 		//////////////////////////////////////////////////////////////////////////////////////////
 
 		// ID / PW 입력창 만들기
@@ -216,27 +209,26 @@ LRESULT CALLBACK MainWndProc(HWND hWnd, UINT iMessage, WPARAM wParam, LPARAM lPa
 
 			if (lstrlen(ID) != 0 && lstrlen(PW) != 0) {
 
-				//lstrcpy(TEXT, hUser_ID);
-				//lstrcat(TEXT, "-");
-				//lstrcat(TEXT, hUser_PW);
-				//Send_Text("C00", TEXT);
+				lstrcpy(TEXT, ID);
+				lstrcat(TEXT, "-");
+				lstrcat(TEXT, PW);
+				Send_Text("C00", TEXT);
+				// 서버로 부터 되돌려받은 응답으로 로그인가능한지 확인
 
-
-				// 결제화면인 PricePage로 Screen 세팅
-				View_State = PRICEPAGE;
-				Change_Screen();
 			}
 			break;
 		case UTIL_BTN + 1:
 			//ID찾기
-
+			DialogBox(g_hInst, MAKEINTRESOURCE(IDD_DLG_FIND_ID), hWnd, (DLGPROC)Find_ID_DlgProc);
 			break;
 		case UTIL_BTN + 2:
 			//PW찾기
-
+			DialogBox(g_hInst, MAKEINTRESOURCE(IDD_DLG_FIND_PW), hWnd, (DLGPROC)Find_PW_DlgProc);
 			break;
 		case UTIL_BTN + 3:
 			// 회원 가입
+			DialogBox(g_hInst, MAKEINTRESOURCE(IDD_DLG_JOIN), hWnd, (DLGPROC)Join_DlgProc);
+			/*
 			GetWindowText(ID_EDIT, ID, 30);
 			GetWindowText(PW_EDIT, PW, 30);
 
@@ -247,6 +239,10 @@ LRESULT CALLBACK MainWndProc(HWND hWnd, UINT iMessage, WPARAM wParam, LPARAM lPa
 				View_State = PRICEPAGE;
 				Change_Screen();
 			}
+			else {
+				MessageBox(hWndMain, "ID와 PW를 입력해주세요!!", "오류", MB_OK);
+			}
+			*/
 			break;
 		case UTIL_BTN + 4:
 			// 자리 선택
@@ -263,10 +259,10 @@ LRESULT CALLBACK MainWndProc(HWND hWnd, UINT iMessage, WPARAM wParam, LPARAM lPa
 	case WM_DESTROY:
 		// brush 삭제
 		if (hBrush) DeleteObject(hBrush);
-		// 로그아웃 메세지 보내기
-		nReturn = send(clientsock, "CFF", sizeof("CFF"), 0);
+		
 		// 접속 종료 (소캣 객체)
-		closesocket(clientsock);
+		shutdown(clientsock, SD_SEND);			// 정상 종료 메세지 보내기
+		closesocket(clientsock);				// 소켓 해제
 		// 윈속 해제
 		WSACleanup();
 		//KillTimer(hWndMain, 1);
@@ -276,6 +272,179 @@ LRESULT CALLBACK MainWndProc(HWND hWnd, UINT iMessage, WPARAM wParam, LPARAM lPa
 	}
 	return(DefWindowProc(hWnd, iMessage, wParam, lParam));
 }
+
+LRESULT CALLBACK EditOnlyNumProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
+{
+	switch (msg)
+	{
+	case WM_KEYDOWN:
+		if (wParam == VK_HANGUL)  // 한영키 눌렀을 때 무시
+		{
+			MessageBeep(MB_ICONEXCLAMATION);
+			return 0; // 무시
+		}
+		break;
+
+	case WM_CHAR:
+		if ((wParam >= '0' && wParam <= '9') ||   // 숫자
+			wParam == VK_BACK)                   // 백스페이스 허용
+		{
+			return CallWindowProc(Edit_Phone_Proc, hWnd, msg, wParam, lParam);
+		}
+		else
+		{
+			MessageBeep(MB_ICONERROR);
+			return 0;
+		}
+	}
+
+	return CallWindowProc(Edit_Phone_Proc, hWnd, msg, wParam, lParam);
+}
+
+LRESULT CALLBACK EditOnlyAlphaNumProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
+{
+	switch (msg)
+	{
+	case WM_KEYDOWN:
+		if (wParam == VK_HANGUL)  // 한영키 눌렀을 때 무시
+		{
+			MessageBeep(MB_ICONEXCLAMATION);
+			return 0; // 무시
+		}
+		break;
+
+	case WM_CHAR:
+		if ((wParam >= '0' && wParam <= '9') ||   // 숫자
+			(wParam >= 'A' && wParam <= 'Z') ||   // 대문자
+			(wParam >= 'a' && wParam <= 'z') ||   // 소문자
+			wParam == VK_BACK)                   // 백스페이스 허용
+		{
+			break;
+		}
+		else
+		{
+			MessageBeep(MB_ICONERROR);
+			return 0;
+		}
+	}
+	
+	if (hWnd == GetDlgItem(hWndFind_PW, IDC_PW_EDIT_ID)) {
+		return CallWindowProc(Edit_ID_Proc, hWnd, msg, wParam, lParam);
+	}
+	else if (hWnd == GetDlgItem(hWndJoin, IDC_JOIN_EDIT_ID)) {
+		return CallWindowProc(Edit_ID_Proc, hWnd, msg, wParam, lParam);
+	}
+	else if (hWnd == GetDlgItem(hWndJoin, IDC_JOIN_EDIT_PW)) {
+		return CallWindowProc(Edit_PW_Proc, hWnd, msg, wParam, lParam);
+	}
+	else {
+		return DefWindowProc(hWnd, msg, wParam, lParam); // fallback
+	}
+}
+
+
+BOOL CALLBACK Find_ID_DlgProc(HWND hDlg, UINT iMessage, WPARAM wParam, LPARAM lParam) {
+	TCHAR Phone[12];
+
+	switch (iMessage) {
+	case WM_INITDIALOG:
+		SetDlgItemText(hDlg, IDC_ID_EDIT_PNUM, "");
+		SetDlgItemText(hDlg, IDC_ID_STATIC, "");
+		SendMessage(GetDlgItem(hDlg, IDC_ID_EDIT_PNUM), EM_LIMITTEXT, (WPARAM)11, 0);
+		
+		// 서브클래싱
+		Edit_Phone_Proc = (WNDPROC)SetWindowLongPtr(GetDlgItem(hDlg, IDC_ID_EDIT_PNUM), GWLP_WNDPROC, (LONG_PTR)EditOnlyNumProc);
+
+		return TRUE;
+	case WM_COMMAND:
+		switch (LOWORD(wParam)) {
+		case IDOK:
+			GetDlgItemText(hDlg, IDC_ID_EDIT_PNUM, Phone, 12);
+
+			if (lstrlen(Phone) == 11) {
+				Send_Text("C01",Phone);
+			}
+			else {
+				MessageBox(hDlg, "잘못된 번호입니다.", "client", MB_OK);
+			}
+
+			return TRUE;
+		case IDCANCEL:
+			EndDialog(hDlg, IDCANCEL);
+			return TRUE;
+		default:
+			break;
+		}
+		return TRUE;
+	}
+	return FALSE;
+}
+
+BOOL CALLBACK Find_PW_DlgProc(HWND hDlg, UINT iMessage, WPARAM wParam, LPARAM lParam) {
+	
+	switch (iMessage) {
+	case WM_INITDIALOG:
+		hWndFind_PW = hDlg;
+		SendMessage(GetDlgItem(hDlg, IDC_PW_EDIT_PNUM), EM_LIMITTEXT, (WPARAM)11, 0);
+
+		// 서브클래싱
+		Edit_ID_Proc = (WNDPROC)SetWindowLongPtr(GetDlgItem(hDlg, IDC_PW_EDIT_ID), GWLP_WNDPROC, (LONG_PTR)EditOnlyAlphaNumProc);
+		Edit_Phone_Proc = (WNDPROC)SetWindowLongPtr(GetDlgItem(hDlg, IDC_PW_EDIT_PNUM), GWLP_WNDPROC, (LONG_PTR)EditOnlyNumProc);
+
+		return TRUE;
+	case WM_COMMAND:
+		switch (LOWORD(wParam)) {
+		case IDOK:
+			EndDialog(hDlg, IDOK);
+			return TRUE;
+		case IDCANCEL:
+			EndDialog(hDlg, IDCANCEL);
+			return TRUE;
+		default:
+			if ((199 < LOWORD(wParam)) && (LOWORD(wParam) < 230)) {
+		
+			}
+			break;
+		}
+		return TRUE;
+	}
+	return FALSE;
+}
+
+
+BOOL CALLBACK Join_DlgProc(HWND hDlg, UINT iMessage, WPARAM wParam, LPARAM lParam) {
+	
+	switch (iMessage) {
+	case WM_INITDIALOG:
+		hWndJoin = hDlg;
+		SendMessage(GetDlgItem(hDlg, IDC_JOIN_EDIT_PNUM), EM_LIMITTEXT, (WPARAM)11, 0);
+
+		// 서브클래싱
+		Edit_ID_Proc = (WNDPROC)SetWindowLongPtr(GetDlgItem(hDlg, IDC_JOIN_EDIT_ID), GWLP_WNDPROC, (LONG_PTR)EditOnlyAlphaNumProc);
+		Edit_PW_Proc = (WNDPROC)SetWindowLongPtr(GetDlgItem(hDlg, IDC_JOIN_EDIT_PW), GWLP_WNDPROC, (LONG_PTR)EditOnlyAlphaNumProc);
+		Edit_Phone_Proc = (WNDPROC)SetWindowLongPtr(GetDlgItem(hDlg, IDC_JOIN_EDIT_PNUM), GWLP_WNDPROC, (LONG_PTR)EditOnlyNumProc);
+
+		return TRUE;
+	case WM_COMMAND:
+		switch (LOWORD(wParam)) {
+		case IDOK:
+			EndDialog(hDlg, IDOK);
+			return TRUE;
+		case IDCANCEL:
+			EndDialog(hDlg, IDCANCEL);
+			return TRUE;
+		default:
+			if ((199 < LOWORD(wParam)) && (LOWORD(wParam) < 230)) {
+		
+			}
+			break;
+		}
+		return TRUE;
+	}
+	return FALSE;
+}
+
+
 
 BOOL CALLBACK SeatDlgProc(HWND hDlg, UINT iMessage, WPARAM wParam, LPARAM lParam) {
 	TCHAR num[5];
@@ -361,11 +530,12 @@ DWORD WINAPI Recv_Thread(LPVOID Param) {
 					Change_Screen();
 				}
 				else {
-					MessageBox(hWndMain, "fail", "알림", MB_OK);
+					MessageBox(hWndMain, "회원정보가 잘못되었습니다!!", "알림", MB_OK);
 				}
 			}
 			else if (lstrcmp(CODE, "S01") == 0) {
 				// 핸드폰번호 보내고 아이디 받기
+				MessageBox(hWndMain, TEXT, "오류", MB_OK);
 			}
 			else if (lstrcmp(CODE, "S02") == 0) {
 				// 핸드폰번호, 아이디 보내고 PW초기화
@@ -397,11 +567,38 @@ DWORD WINAPI Recv_Thread(LPVOID Param) {
 			}
 		}
 		else {
-			MessageBox(hWndMain, "서버와 연결이 끊어졌습니다!", "server", MB_OK);
+			MessageBox(hWndMain, "서버와 연결이 끊어졌습니다!", "client", MB_OK);
 			return 0;
 		}
 	}
 	return 0;
+}
+
+/*--------------------------------------------------------
+ Connect_Server() : 서버에 연결하는 함수
+-------------------------------------------------------- */
+void Connect_Server() {
+	// 소켓 초기화 (윈속 라이브러리 버전, 윈속 시스템 관련 정보)//////////////////////////////
+
+	nReturn = WSAStartup(WORD(2.0), &wsadata);
+
+	// 소켓 생성 (IPv4: AF_INET | IPv6: AF_INET6 , 소켓 통신 타입, 프로토콜 결정)
+	clientsock = socket(AF_INET, SOCK_STREAM, 0);
+
+	addr_client.sin_family = AF_INET;
+	addr_client.sin_addr.s_addr = inet_addr(g_szlpAddress);
+	addr_client.sin_port = htons(g_uPort);
+
+	// 서버 연결
+	nReturn = connect(clientsock, (sockaddr*)&addr_client, addrlen_clt);
+
+	// 수신 스레드 생성
+	hThread = CreateThread(NULL, 0, Recv_Thread, &clientsock, 0, &ThreadID);
+	CloseHandle(hThread);
+
+	if (nReturn) {
+		MessageBox(hWndMain, "연결실패", "오류", MB_OK);
+	}
 }
 
 /*--------------------------------------------------------
@@ -508,6 +705,24 @@ void Change_Screen() {
 		ShowWindow(STATIC_TEXT_REST_TIME, SW_SHOW);*/
 	}
 }
+
+void SetHangulMode(HWND hWnd, BOOL bHangulOn) {
+	HIMC hIMC = ImmGetContext(hWnd);
+	if (!hIMC) return;
+
+	DWORD conversion, sentence;
+	ImmGetConversionStatus(hIMC, &conversion, &sentence);
+
+	if (bHangulOn)
+		conversion |= IME_CMODE_NATIVE;       // 한글 입력 모드 켜기
+	else
+		conversion &= ~IME_CMODE_NATIVE;      // 한글 입력 모드 끄기 (영문 모드)
+
+	ImmSetConversionStatus(hIMC, conversion, sentence);
+	ImmReleaseContext(hWnd, hIMC);
+}
+
+
 
 /*--------------------------------------------------------
  Send_Text(const char*, const char*, SOCKET*): 서버로

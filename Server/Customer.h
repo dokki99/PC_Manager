@@ -4,10 +4,10 @@
 
 // 현재 로그인 고객 정보 구조체
 typedef struct Client_Information {
-	TCHAR ID[21];				// ID
-	int RemainTime;				// 남은시간(최대 999:59:59) 3,599,999초
-	BOOL State;					// 좌석에 앉아있는지 상태 (TRUE/FALSE)
-	Client_Information* link;	// 링크
+	TCHAR ID[21];						// ID
+	int RemainTime;						// 남은시간(최대 999:59:59) 3,599,999초
+	BOOL State;							// 좌석에 앉아있는지 상태 (TRUE/FALSE)
+	struct Client_Information* link;	// 링크
 }CI;
 
 LRESULT CALLBACK Customer_Info_Proc(HWND, UINT, WPARAM, LPARAM);
