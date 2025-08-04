@@ -61,7 +61,6 @@ TCHAR buf[buflen];
 /////////////////////////////////////////////////////////////
 
 // 컨트롤 관련 변수
-
 HWND SEAT_BUTTON[MAX_SEAT];
 HWND JOIN_BTN, LOGIN_BTN, LOGOUT_BTN, FINDID_BTN, FINDPW_BTN, SELECTION_BTN;
 HWND CHARGE_BTN0, CHARGE_BTN1, CHARGE_BTN2, CHARGE_BTN3, CHARGE_BTN4, CHARGE_BTN5, CHARGE_BTN6, CHARGE_BTN7, CHARGE_BTN8, CHARGE_BTN9;
@@ -69,7 +68,6 @@ HWND ID_EDIT, PW_EDIT;
 HWND STATIC_TEXT_ID, STATIC_TEXT_PW;
 
 // 운영 관련 변수
-
 TCHAR hUser_ID[30];		// 현재 접속 유저
 
 int View_State;			// 화면상태
@@ -110,7 +108,8 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR IpszCmd
 --------------------------------------------------------*/
 LRESULT CALLBACK MainWndProc(HWND hWnd, UINT iMessage, WPARAM wParam, LPARAM lParam) {
 	PAINTSTRUCT ps;
-	TCHAR TEXT[256], B_num[3], ID[30], PW[30];
+	TCHAR TEXT[256], B_num[33], PW[30];
+	static TCHAR ID[30];
 	HFONT hFont, OldFont;
 	static HDC hdc;
 	static HBRUSH hBrush = NULL;
@@ -121,11 +120,14 @@ LRESULT CALLBACK MainWndProc(HWND hWnd, UINT iMessage, WPARAM wParam, LPARAM lPa
 		hBrush = CreateSolidBrush(RGB(218, 220, 214));
 		//// 현재 접속 유저 아이디 초기화
 		lstrcpy(hUser_ID, "");
-
+		//변수 초기화
+		lstrcpy(ID, "");
+		lstrcpy(PW, "");
 		// 서버에 연결
 		Connect_Server();
-		
+
 		//////////////////////////////////////////////////////////////////////////////////////////
+		//LoginPage 윈도우 생성
 
 		// ID / PW 입력창 만들기
 		STATIC_TEXT_ID = CreateWindow("static", "ID ", WS_CHILD | WS_VISIBLE | SS_CENTER, 15, 12, 40, 30, hWndMain, (HMENU)1, g_hInst, NULL);
@@ -141,7 +143,7 @@ LRESULT CALLBACK MainWndProc(HWND hWnd, UINT iMessage, WPARAM wParam, LPARAM lPa
 		JOIN_BTN = CreateWindow("button", "회원 가입", WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON, 175, 115, 80, 30, hWndMain, (HMENU)(UTIL_BTN + 3), g_hInst, NULL);
 
 		// Price화면(PricePage{ 0,0,900,700 }) 핸들생성
-
+		//PricePage 윈도우 생성
 		// 충전 버튼 만들기
 		CHARGE_BTN0 = CreateWindow("button", "1시간\n1,000원", WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON | BS_MULTILINE, 100, 70, 130, 80, hWndMain, (HMENU)(CHARGE_BTN), g_hInst, NULL);
 		CHARGE_BTN1 = CreateWindow("button", "2시간\n2,000원", WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON | BS_MULTILINE, 280, 70, 130, 80, hWndMain, (HMENU)(CHARGE_BTN + 1), g_hInst, NULL);
@@ -165,39 +167,28 @@ LRESULT CALLBACK MainWndProc(HWND hWnd, UINT iMessage, WPARAM wParam, LPARAM lPa
 		return 0;
 	case WM_CTLCOLORSTATIC:
 		SetBkMode((HDC)wParam, TRANSPARENT);
-
 		return (INT_PTR)hBrush;
 	case WM_PAINT:
 		hdc = BeginPaint(hWndMain, &ps);
-
 		if (View_State == PRICEPAGE) {
 			Rectangle(hdc, 60, 50, 450, 570);
+			//폰트 설정
+			hFont = CreateFont(-36, 0, 0, 0, FW_BOLD, 0, 0, 0, HANGEUL_CHARSET, 0, 0, 0, VARIABLE_PITCH | FF_ROMAN, TEXT("굴림체"));
+			OldFont = (HFONT)SelectObject(hdc, hFont);
+			SetBkMode(hdc, TRANSPARENT);
+			//환영 메세지, 잔여 시간 출력
+			TextOut(hdc, 550, 50, TEXT("어서오세요"), lstrlen(TEXT("어서오세요")));
+			lstrcpy(hUser_ID, ID);
+			wsprintf(TEXT, " %s 님", hUser_ID);
+			SetTextAlign(hdc, TA_RIGHT);
+			TextOut(hdc, 800, 130, TEXT, lstrlen(TEXT));
+			SetTextAlign(hdc, TA_LEFT);
+			TextOut(hdc, 500, 200, TEXT("잔여 시간: 00:00"), lstrlen(TEXT("잔여 시간: 00:00")));
+
+			//할당된 hFont 해제후 원상복귀
+			SelectObject(hdc, OldFont);
+			DeleteObject(hFont);
 		}
-
-		//ID,PW 
-		GetWindowText(ID_EDIT, ID, 30);
-		GetWindowText(PW_EDIT, PW, 30);
-		//폰트 설정
-		hFont = CreateFont(-36, 0, 0, 0, FW_BOLD, 0, 0, 0, HANGEUL_CHARSET, 0, 0, 0, VARIABLE_PITCH | FF_ROMAN, TEXT("굴림체"));
-		OldFont = (HFONT)SelectObject(hdc, hFont);
-		SetBkMode(hdc, TRANSPARENT);
-		//환영 메세지, 잔여 시간 출력
-		TextOut(hdc, 550, 50, TEXT("어서오세요"), lstrlen(TEXT("어서오세요")));
-		lstrcpy(hUser_ID, ID);
-		wsprintf(TEXT, " %s 님", hUser_ID);
-		SetTextAlign(hdc, TA_RIGHT);
-		TextOut(hdc, 800, 130, TEXT, lstrlen(TEXT));
-		SetTextAlign(hdc, TA_LEFT);
-		TextOut(hdc, 500, 200, TEXT("잔여 시간: 00:00"), lstrlen(TEXT("잔여 시간: 00:00")));
-
-		//hFont 할당된 거 해제후 원상복귀, ID,PW 변수 초기화
-		SelectObject(hdc, OldFont);
-		DeleteObject(hFont);
-		SetWindowText(ID_EDIT, "");
-		SetWindowText(PW_EDIT, "");
-		lstrcpy(ID, "");
-		lstrcpy(PW, "");
-
 		EndPaint(hWndMain, &ps);
 		break;
 	case WM_COMMAND:
@@ -248,6 +239,12 @@ LRESULT CALLBACK MainWndProc(HWND hWnd, UINT iMessage, WPARAM wParam, LPARAM lPa
 			// 자리 선택
 			DialogBox(g_hInst, MAKEINTRESOURCE(IDD_DLG_SEAT), hWnd, (DLGPROC)SeatDlgProc);
 			break;
+		case UTIL_BTN + 5:
+			// 로그아웃
+			View_State = LOGINPAGE;
+			Change_Screen();
+			lstrcpy(ID, "");
+			break;
 		default:
 			if ((399 < LOWORD(wParam)) && (LOWORD(wParam) < 500)) {
 				wsprintf(B_num, "%s-%d", hUser_ID, LOWORD(wParam) - 399);
@@ -259,7 +256,7 @@ LRESULT CALLBACK MainWndProc(HWND hWnd, UINT iMessage, WPARAM wParam, LPARAM lPa
 	case WM_DESTROY:
 		// brush 삭제
 		if (hBrush) DeleteObject(hBrush);
-		
+
 		// 접속 종료 (소캣 객체)
 		shutdown(clientsock, SD_SEND);			// 정상 종료 메세지 보내기
 		closesocket(clientsock);				// 소켓 해제
@@ -327,7 +324,7 @@ LRESULT CALLBACK EditOnlyAlphaNumProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM
 			return 0;
 		}
 	}
-	
+
 	if (hWnd == GetDlgItem(hWndFind_PW, IDC_PW_EDIT_ID)) {
 		return CallWindowProc(Edit_ID_Proc, hWnd, msg, wParam, lParam);
 	}
@@ -351,7 +348,7 @@ BOOL CALLBACK Find_ID_DlgProc(HWND hDlg, UINT iMessage, WPARAM wParam, LPARAM lP
 		SetDlgItemText(hDlg, IDC_ID_EDIT_PNUM, "");
 		SetDlgItemText(hDlg, IDC_ID_STATIC, "");
 		SendMessage(GetDlgItem(hDlg, IDC_ID_EDIT_PNUM), EM_LIMITTEXT, (WPARAM)11, 0);
-		
+
 		// 서브클래싱
 		Edit_Phone_Proc = (WNDPROC)SetWindowLongPtr(GetDlgItem(hDlg, IDC_ID_EDIT_PNUM), GWLP_WNDPROC, (LONG_PTR)EditOnlyNumProc);
 
@@ -362,7 +359,7 @@ BOOL CALLBACK Find_ID_DlgProc(HWND hDlg, UINT iMessage, WPARAM wParam, LPARAM lP
 			GetDlgItemText(hDlg, IDC_ID_EDIT_PNUM, Phone, 12);
 
 			if (lstrlen(Phone) == 11) {
-				Send_Text("C01",Phone);
+				Send_Text("C01", Phone);
 			}
 			else {
 				MessageBox(hDlg, "잘못된 번호입니다.", "client", MB_OK);
@@ -381,7 +378,7 @@ BOOL CALLBACK Find_ID_DlgProc(HWND hDlg, UINT iMessage, WPARAM wParam, LPARAM lP
 }
 
 BOOL CALLBACK Find_PW_DlgProc(HWND hDlg, UINT iMessage, WPARAM wParam, LPARAM lParam) {
-	
+
 	switch (iMessage) {
 	case WM_INITDIALOG:
 		hWndFind_PW = hDlg;
@@ -402,7 +399,7 @@ BOOL CALLBACK Find_PW_DlgProc(HWND hDlg, UINT iMessage, WPARAM wParam, LPARAM lP
 			return TRUE;
 		default:
 			if ((199 < LOWORD(wParam)) && (LOWORD(wParam) < 230)) {
-		
+
 			}
 			break;
 		}
@@ -411,9 +408,8 @@ BOOL CALLBACK Find_PW_DlgProc(HWND hDlg, UINT iMessage, WPARAM wParam, LPARAM lP
 	return FALSE;
 }
 
-
 BOOL CALLBACK Join_DlgProc(HWND hDlg, UINT iMessage, WPARAM wParam, LPARAM lParam) {
-	
+
 	switch (iMessage) {
 	case WM_INITDIALOG:
 		hWndJoin = hDlg;
@@ -435,7 +431,7 @@ BOOL CALLBACK Join_DlgProc(HWND hDlg, UINT iMessage, WPARAM wParam, LPARAM lPara
 			return TRUE;
 		default:
 			if ((199 < LOWORD(wParam)) && (LOWORD(wParam) < 230)) {
-		
+
 			}
 			break;
 		}
@@ -443,8 +439,6 @@ BOOL CALLBACK Join_DlgProc(HWND hDlg, UINT iMessage, WPARAM wParam, LPARAM lPara
 	}
 	return FALSE;
 }
-
-
 
 BOOL CALLBACK SeatDlgProc(HWND hDlg, UINT iMessage, WPARAM wParam, LPARAM lParam) {
 	TCHAR num[5];
@@ -524,12 +518,12 @@ DWORD WINAPI Recv_Thread(LPVOID Param) {
 
 			if (lstrcmp(CODE, "S00") == 0) {
 				// 로그인 성공/실패 여부
-				if (lstrcmp(TEXT, "SUCCESS") == 0) {
+				if (lstrcmp(TEXT, "FAIL") != 0) {			//로그인 성공
 					// 결제화면인 PricePage로 Screen 세팅
 					View_State = PRICEPAGE;
 					Change_Screen();
 				}
-				else {
+				else {										//로그인 실패
 					MessageBox(hWndMain, "회원정보가 잘못되었습니다!!", "알림", MB_OK);
 				}
 			}
@@ -655,6 +649,14 @@ void Change_Screen() {
 	if (View_State == LOGINPAGE) {
 		SetWindowPos(hWndMain, NULL, LoginPage.left, LoginPage.top, LoginPage.right, LoginPage.bottom, SWP_NOMOVE | SWP_NOZORDER);
 		SetWindowText(hWndMain, "로그인");
+		ShowWindow(LOGIN_BTN, SW_SHOW);
+		ShowWindow(FINDID_BTN, SW_SHOW);
+		ShowWindow(FINDPW_BTN, SW_SHOW);
+		ShowWindow(JOIN_BTN, SW_SHOW);
+		ShowWindow(STATIC_TEXT_ID, SW_SHOW);
+		ShowWindow(STATIC_TEXT_PW, SW_SHOW);
+		ShowWindow(ID_EDIT, SW_SHOW);
+		ShowWindow(PW_EDIT, SW_SHOW);
 		ShowWindow(CHARGE_BTN0, SW_HIDE);
 		ShowWindow(CHARGE_BTN1, SW_HIDE);
 		ShowWindow(CHARGE_BTN2, SW_HIDE);
@@ -665,15 +667,9 @@ void Change_Screen() {
 		ShowWindow(CHARGE_BTN7, SW_HIDE);
 		ShowWindow(CHARGE_BTN8, SW_HIDE);
 		ShowWindow(CHARGE_BTN9, SW_HIDE);
-		ShowWindow(LOGIN_BTN, SW_SHOW);
-		ShowWindow(FINDID_BTN, SW_SHOW);
-		ShowWindow(FINDPW_BTN, SW_SHOW);
-		ShowWindow(JOIN_BTN, SW_SHOW);
 		ShowWindow(SELECTION_BTN, SW_HIDE);
-		ShowWindow(STATIC_TEXT_ID, SW_SHOW);
-		ShowWindow(STATIC_TEXT_PW, SW_SHOW);
-		ShowWindow(ID_EDIT, SW_SHOW);
-		ShowWindow(PW_EDIT, SW_SHOW);
+		ShowWindow(LOGOUT_BTN, SW_HIDE);
+		ShowWindow(SELECTION_BTN, SW_HIDE);
 		/*
 		ShowWindow(STATIC_TEXT_H_USER, SW_HIDE);
 		ShowWindow(STATIC_TEXT_REST_TIME, SW_HIDE);*/
@@ -691,11 +687,13 @@ void Change_Screen() {
 		ShowWindow(CHARGE_BTN7, SW_SHOW);
 		ShowWindow(CHARGE_BTN8, SW_SHOW);
 		ShowWindow(CHARGE_BTN9, SW_SHOW);
+		ShowWindow(SELECTION_BTN, SW_SHOW);
+		ShowWindow(LOGOUT_BTN, SW_SHOW);
+		ShowWindow(SELECTION_BTN, SW_SHOW);
 		ShowWindow(LOGIN_BTN, SW_HIDE);
 		ShowWindow(FINDID_BTN, SW_HIDE);
 		ShowWindow(FINDPW_BTN, SW_HIDE);
 		ShowWindow(JOIN_BTN, SW_HIDE);
-		ShowWindow(SELECTION_BTN, SW_SHOW);
 		ShowWindow(STATIC_TEXT_ID, SW_HIDE);
 		ShowWindow(STATIC_TEXT_PW, SW_HIDE);
 		ShowWindow(ID_EDIT, SW_HIDE);
