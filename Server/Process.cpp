@@ -80,15 +80,16 @@ DWORD WINAPI Message_Process(LPVOID Param) {
 	MAP* MP;
 	CCI* L_CI;
 	CI* F_CI = NULL;
-	TCHAR ID[20], PWD[20], Send_TEXT[300], pNum[12], B_num[2];
+	TCHAR ID[20], PWD[20], Send_TEXT[300], hPhone[12], B_num[2], SUB_TEXT[60];
 	int num, RTime;
 
 	while (CONN_ST) {
  		M = Deque_MQ();
 
 		if (M != NULL) {
-			if (lstrcmp(M->CODE, "C00") == 0) {
-				// 로그인 가능한지 확인
+			if (lstrcmp(M->CODE, "C00") == 0) {		// 로그인 가능한지 확인
+
+				// 받은 텍스트 다시 둘로 나누기(A: 문자열 1, B: 문자열2, C:전체 문자열)
 				Split2(ID, PWD, M->TEXT);
 
 				// 고객 잔여 시간 DB에서 찾아 보내주기
@@ -106,23 +107,43 @@ DWORD WINAPI Message_Process(LPVOID Param) {
 			}
 			else if (lstrcmp(M->CODE, "C01") == 0) {
 				// 핸드폰 번호로 아이디 찾아서 보내주기
-				lstrcpy(pNum, M->TEXT);
-				Find_ID(ID, pNum) != TRUE ?
+				lstrcpy(hPhone, M->TEXT);
+				Find_ID(ID, hPhone) != TRUE ?
 					lstrcpy(Send_TEXT, "FAIL") : lstrcpy(Send_TEXT, ID);
 
 				Transform_Text("S01", Send_TEXT, M->Client_Sock);
 			}
 			else if (lstrcmp(M->CODE, "C02") == 0) {
 				// ID와 전화번호를 받고 PW초기화 시켜주기
-				Login_Info_Check(ID, pNum, 2) != TRUE || PWD_Reset(ID, pNum) != TRUE ?
+				Login_Info_Check(ID, hPhone, 2) != TRUE || PWD_Reset(ID, hPhone) != TRUE ?
 					lstrcpy(Send_TEXT, "FAIL") : lstrcpy(Send_TEXT, "비번이 초기화 되었습니다 123456789a");
 
 				Transform_Text("S02", Send_TEXT, M->Client_Sock);
 			}
-			else if (lstrcmp(M->CODE, "C03") == 0) {
-				// 회원가입 가능한지 확인 및 가입
-				Login_Info_Check(ID, pNum, 3) == TRUE || Regist_Customer(ID, PWD, pNum) != TRUE ?
-					lstrcpy(Send_TEXT, "FAIL") : lstrcpy(Send_TEXT, "회원가입이 완료되었습니다!!");
+			else if (lstrcmp(M->CODE, "C03") == 0) {	// 회원가입 가능한지 확인 및 가입
+				// 받은 텍스트 다시 둘로 나누기(A: 문자열 1, B: 문자열2, C:전체 문자열)
+				Split2(ID, SUB_TEXT, M->TEXT);
+				Split2(PWD, hPhone, SUB_TEXT);
+
+				// 아이디가 중복 인지 확인
+				if (Login_Info_Check(M->TEXT, "", 0) != TRUE) {
+					// 회원가입이 가능한지 확인
+					if (Login_Info_Check(ID, hPhone, 3) != TRUE) {
+						// DB삽입
+						if (Regist_Customer(ID, PWD, hPhone) != TRUE) {
+							lstrcpy(Send_TEXT, "JOIN SUCCESS");
+						}
+						else {
+							lstrcpy(Send_TEXT, "JOIN FAIL");
+						}
+					}
+					else {
+						lstrcpy(Send_TEXT, "PHONE DUP");
+					}
+				}
+				else {
+					lstrcpy(Send_TEXT, "ID DUP");
+				}
 
 				Transform_Text("S03", Send_TEXT, M->Client_Sock);
 		
@@ -198,16 +219,19 @@ DWORD WINAPI Message_Process(LPVOID Param) {
 						Enque_CQ(F_CI, B_num);
 					}
 				}
-				else if (lstrcmp(M->CODE, "C07") == 0) {
+			}
+			else if (lstrcmp(M->CODE, "C07") == 0) {
+				// 아이디가 중복 인지 확인
 
-				}
-				else if (lstrcmp(M->CODE, "C08") == 0) {
+				Login_Info_Check(M->TEXT, "", 0) != TRUE ? lstrcpy(Send_TEXT, "ID AV") : lstrcpy(Send_TEXT, "ID DUP");
+				Transform_Text("S07", Send_TEXT, M->Client_Sock);
+			}
+			else if (lstrcmp(M->CODE, "C08") == 0) {
 
-				}
-				else {
-					// fail 처리
-					Enque_SQ("FAIL", M->Client_Sock);
-				}
+			}
+			else {
+				// fail 처리
+				Enque_SQ("FAIL", M->Client_Sock);
 			}
 			free(M);
 		}
@@ -361,6 +385,29 @@ DWORD WINAPI Order_Sub_Process(LPVOID Param) {
 	return 0;
 }
 
+/*--------------------------------------------------------
+ TimeOut_Thread(LPVOID) : 시간초과 프로세스
+-------------------------------------------------------- */
+DWORD WINAPI TimeOut_Process(LPVOID Param) {
+	CCI* P;
+	time_t C_Time;
+	while (CONN_ST) {
+		P = C_CI;
+		if (P->link != NULL) {
+			P = P->link;
+			C_Time = time(NULL);
+			
+			if (difftime(C_Time, P->Start_Time) > 10) {
+				Transform_Text("S08", "Time Out", P->Sock);
+				
+				Del_CCI(P->Sock);
+			}
+		}
+		Sleep(1000);
+	}
+	return 0;
+}
+
 
 /*--------------------------------------------------------
  Update_Seat_Code() : 좌석 현황 최신화
@@ -404,6 +451,7 @@ void Split2(TCHAR* TEXT1, TCHAR* TEXT2, const TCHAR* TEXT) {
 	TEXT2[j - (i + 1)] = '\0';
 
 }
+
 /*--------------------------------------------------------
  Int_To_Time(int, TCHAR*) : 초단위 시간을 00:00:00 형식으로
  바꿔줌
@@ -829,6 +877,20 @@ void Transform_Text(const TCHAR* CODE, const TCHAR* TEXT, SOCKET P) {
 	}
 	else if (lstrcmp(CODE, "S05") == 0) {
 		// 해당 소켓에 [SUCCESS / FAIL] 메세지 보내기
+		wsprintf(Send_TEXT, "%s-%s", CODE, TEXT);
+		Enque_SQ(Send_TEXT, P);
+	}
+	else if (lstrcmp(CODE, "S06") == 0) {
+		// 해당 소켓에 [SUCCESS / FAIL] 메세지 보내기
+		wsprintf(Send_TEXT, "%s-%s", CODE, TEXT);
+		Enque_SQ(Send_TEXT, P);
+	}
+	else if (lstrcmp(CODE, "S07") == 0) {
+		// 해당 소켓에 [SUCCESS / FAIL] 메세지 보내기
+		wsprintf(Send_TEXT, "%s-%s", CODE, TEXT);
+		Enque_SQ(Send_TEXT, P);
+	}
+	else if (lstrcmp(CODE, "S08") == 0) {
 		wsprintf(Send_TEXT, "%s-%s", CODE, TEXT);
 		Enque_SQ(Send_TEXT, P);
 	}

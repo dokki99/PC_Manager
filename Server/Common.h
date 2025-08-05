@@ -11,7 +11,7 @@
 #include <windows.h>
 #include <commctrl.h>
 #include <stdio.h>
+#include <ctime>
 #include "resource.h"
-
 
 #endif

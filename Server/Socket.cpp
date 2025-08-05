@@ -42,6 +42,7 @@ CCI* Create_CCI() {
 	N->Sock = INVALID_SOCKET;
 	N->Thread_Info = NULL;
 	N->link = NULL;
+	N->Client_State = 0;	
 
 	return N;
 }
@@ -64,7 +65,7 @@ void Add_CCI_Sock(SOCKET S) {
 }
 
 /*--------------------------------------------------------
- Add_CCI_Thread(SOCKET ,HANDLE ,DWORD) : 소켓 정보에 맞는
+ Add_CCI_Thread(SOCKET ,HANDLE ,DWORD): 소켓 정보에 맞는
  스레드 정보 추가
 --------------------------------------------------------*/
 void Add_CCI_Thread(SOCKET S,HANDLE Thread_Info, DWORD Thread_ID) {
@@ -76,6 +77,39 @@ void Add_CCI_Thread(SOCKET S,HANDLE Thread_Info, DWORD Thread_ID) {
 		if (P->Sock == S) {
 			P->Thread_Info = Thread_Info;
 			P->Thread_ID = Thread_ID;
+			break;
+		}
+	}
+}
+
+/*--------------------------------------------------------
+ Set_CCI_Time(SOCKET, time_t): 클라이언트의 마지막 반응
+ 시간 설정
+--------------------------------------------------------*/
+void Set_CCI_Time(SOCKET S, time_t S_Time) {
+	CCI* P;
+
+	P = C_CI;
+	while (P->link != NULL) {
+		P = P->link;
+		if (P->Sock == S) {
+			P->Start_Time = S_Time;
+			break;
+		}
+	}
+}
+
+/*--------------------------------------------------------
+ Set_CCI_State(SOCKET , int): 클라이언트의 상태정보 설정
+--------------------------------------------------------*/
+void Set_CCI_State(SOCKET S, int State) {
+	CCI* P;
+
+	P = C_CI;
+	while (P->link != NULL) {
+		P = P->link;
+		if (P->Sock == S) {
+			P->Client_State = State;
 			break;
 		}
 	}
@@ -140,9 +174,6 @@ DWORD WINAPI Connect_Process(LPVOID Param) {
 				Thread = CreateThread(NULL, 0, Recv_Thread, Sock, 0, &Thread_ID);
 				Add_CCI_Thread(*Sock, Thread, Thread_ID);
 			}
-			else {
-				break;
-			}
 		}
 
 	}
@@ -179,7 +210,7 @@ DWORD WINAPI Recv_Thread(LPVOID Param) {
 	while (CONN_ST) {
 		// 데이터 수신 (소캣 객체, 받을 문자열, 문자열 크기, 옵션);
 		nReturn = recv(*P, buf, MAX_BUFLEN, 0);
-
+		
 		if (nReturn != SOCKET_ERROR) {
 			if (nReturn == 0) {
 				// 정상 종료
@@ -187,7 +218,15 @@ DWORD WINAPI Recv_Thread(LPVOID Param) {
 				break;
 			}
 			Split_C_T(buf, CODE, TEXT);
-			Enque_MQ(*P, CODE, TEXT);
+			if (lstrcmp(CODE,"CFF") == 0 || lstrcmp(CODE, "CFE") == 0) {
+				Set_CCI_Time(*P, time(NULL));			// 핑 점검 메세지
+				if (lstrcmp(CODE, "CFF") == 0) {
+					Set_CCI_State(*P, atoi(TEXT));		// 
+				}
+			}
+			else {
+				Enque_MQ(*P, CODE, TEXT);
+			}
 		}
 		else {
 			// 비정상 종료
@@ -280,9 +319,9 @@ MQ* Deque_MQ() {
 			Message_Rear->link = NULL;
 		}
 
-		free(E);
+		free(E);	
 	}
-	
+
 	ReleaseMutex(Message_Mutex);
 
 	return N;

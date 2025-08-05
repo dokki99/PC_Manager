@@ -7,6 +7,8 @@ typedef struct Client_Connect_Info {
 	SOCKET Sock;						// 클라이언트 소켓
 	HANDLE Thread_Info;					// 클라이언트 스레드
 	DWORD Thread_ID;					// 클라이언트 스레드 아이디
+	time_t Start_Time;					// 소켓 최초 도착시간
+	int Client_State;					// 클라이언트 상태(익명상태: 1, 로그인 상태: 2, 게임중 상태: 3)
 	struct Client_Connect_Info* link;	// 링크 정보
 }CCI;
 
@@ -27,10 +29,12 @@ typedef struct Send_Queue {
 
 // 소켓 관련 함수////////////////////////////////////////////////////////////
 
-CCI* Create_CCI();							// 소켓 구조체 초기화
-void Add_CCI_Sock(SOCKET);					// 소켓 정보 추가
-void Add_CCI_Thread(SOCKET,HANDLE,DWORD);	// 스레드 정보 추가
-SOCKET* Find_CCI(SOCKET);					// 구조체에 닮긴 소켓주소 리턴
+CCI* Create_CCI();										// 소켓 구조체 초기화
+void Add_CCI_Sock(SOCKET);								// 소켓 정보 추가
+void Add_CCI_Thread(SOCKET,HANDLE,DWORD);				// 스레드 정보 추가
+void Set_CCI_Time(SOCKET, time_t);						// 클라이언트 시간 설정
+void Set_CCI_State(SOCKET, int);						// 클라이언트 상태 추가
+SOCKET* Find_CCI(SOCKET);								// 구조체에 닮긴 소켓주소 리턴
 
 void Del_CCI(SOCKET);					// 소켓 정보 삭제
 
@@ -42,7 +46,6 @@ DWORD WINAPI Connect_Process(LPVOID);						// 서버 연결 스레드
 DWORD WINAPI Send_Process(LPVOID);							// 송신 스레드
 DWORD WINAPI Recv_Thread(LPVOID);							// 수신 스레드
 
-void Transform_Text(const TCHAR*, const TCHAR* , SOCKET );	// 텍스트 송신
 void Split_C_T(TCHAR*, TCHAR*, TCHAR*);								// 코드-텍스트 분할
 
 ////////////////////////////////////////////////////////////////////////

@@ -361,6 +361,10 @@ BOOL Login_Info_Check(const TCHAR* ID, const TCHAR* Data, int state) {
 	else if (state == 3) {
 		lstrcat(Query, "' OR C_Phone = '");			// 회원가입 및 요금충전
 	}
+	else if (state == 4) {
+		lstrcpy(Query, "select COUNT(*) from dbo.Customer_Info where C_Phone = '");	// 휴대폰 번호 중복 체크
+	}
+
 	lstrcat(Query, Data);
 	lstrcat(Query, "'");
 
