@@ -87,6 +87,9 @@ HANDLE *Order_Sub_Mutex;							// 주문 처리 뮤택스
 
 HANDLE Connect_Thread;								// 서버 연결 스레드
 
+HANDLE TimeOut_Thread;								// 시간 초과 스레드
+DWORD TimeOut_TID;									// 시간 초과 스레드 ID
+
 HANDLE Send_Thread[MAX_SEND_THREAD];				// 송신 스레드
 HANDLE Send_Mutex;									// 송신 뮤택스
 
@@ -335,6 +338,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT iMessage, WPARAM wParam, LPARAM lParam)
 		// 충전 프로세스 생성
 		Charge_Thread = CreateThread(NULL, 0, Charge_Process, NULL, 0, &Charge_TID);
 
+		
 		// 임시 좌석세팅
 		for (int i = 0; i < 5; i++) {
 			for (int j = 0; j < 6; j++) {
@@ -448,6 +452,9 @@ void SVR_Open() {
 		// 접속 대기 (소켓 객체, 연결 대기열 크기)
 		nReturn = listen(listensock, MAX_BACKLOG);
 
+		// 서버 연결준비 완료
+		CONN_ST = TRUE;
+
 		// 좌석 Relay 스레드 생성 (일단 대기 상태로 생성)
 		for (i = 0; i < MAX_SEAT; i++) {
 			Seat_Thread[i] = CreateThread(NULL, 0, Relay_Thread, &(hSeat[i]->S_num), CREATE_SUSPENDED, &(hSeat[i]->Thread_ID));
@@ -461,14 +468,15 @@ void SVR_Open() {
 		// Connect 스레드 생성(recv스레드 다중생성)
 		Connect_Thread = CreateThread(NULL, 0, Connect_Process, &listensock, 0, &Connect_TID);
 
+		// 시간 초과 스레드 생성
+		TimeOut_Thread = CreateThread(NULL, 0, TimeOut_Process, NULL, 0, &TimeOut_TID);
+
 		// 메시지 처리 프로세스 생성 (3개) 생성
 		for (i = 0; i < MAX_MESSAGE_THREAD; i++) {
 			Message_Thread[i] = CreateThread(NULL, 0, Message_Process, NULL, 0, &Message_TID[i]);
 		}
 
 		//WSAAsyncSelect(listensock, hWndMain, WM_USER + 1, FD_ACCEPT | FD_READ | FD_CLOSE);
-
-		CONN_ST = TRUE;
 	}
 
 	InvalidateRect(hWndMain, NULL, FALSE);
@@ -501,7 +509,8 @@ void SVR_Close() {
 	WaitForMultipleObjects(MAX_MENU, Order_Sub_Thread, TRUE, INFINITE);				// 주문 스레드
 
 	closesocket(listensock);
-	WaitForSingleObject(Connect_Thread, INFINITE);									// 주문 스레드
+	WaitForSingleObject(Connect_Thread, INFINITE);									// 연결 스레드
+	WaitForSingleObject(TimeOut_Thread, INFINITE);									// 시간 경과 스레드
 
 	// 리시브 스레드 | 현재 접속 소켓정보 삭제
 	L_CI = C_CI;

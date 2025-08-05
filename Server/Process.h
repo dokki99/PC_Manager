@@ -37,7 +37,7 @@ DWORD WINAPI Message_Process(LPVOID);		// 메세지 처리 스레드
 DWORD WINAPI Charge_Process(LPVOID);		// 충전 스레드
 DWORD WINAPI Order_Process(LPVOID);			// 주문 처리 스레드
 DWORD WINAPI Order_Sub_Process(LPVOID);		// 주문 분할 처리 스레드
-
+DWORD WINAPI TimeOut_Process(LPVOID);		// 연결 클라이언트 시간 초과 스레드
 
 void Update_Seat_Code();					// 좌석 현황 최신화
 void Split2(TCHAR*, TCHAR*, const TCHAR*);	// 텍스트 한번 더 분할

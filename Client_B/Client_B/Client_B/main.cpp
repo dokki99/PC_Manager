@@ -26,9 +26,10 @@ HWND hWndMain;		// 메인 화면 핸들
 HWND hWndFind_PW;	// 비밀번호 찾기 다이얼로그 핸들
 HWND hWndJoin;		// 가입 다이얼로그 핸들
 
-WNDPROC Edit_Phone_Proc = NULL;	// 핸드폰 에디트 커스텀 프로시저
-WNDPROC Edit_ID_Proc = NULL;	// ID 에디트 커스텀 프로시저
-WNDPROC Edit_PW_Proc = NULL;	// PW 에디트 커스텀 프로시저
+WNDPROC Edit_Phone_Proc = NULL;		// 핸드폰 에디트 커스텀 프로시저
+WNDPROC Edit_Phone_Chk_Proc = NULL;	// 핸드폰 체크 에디트 커스텀 프로시저
+WNDPROC Edit_ID_Proc = NULL;		// ID 에디트 커스텀 프로시저
+WNDPROC Edit_PW_Proc = NULL;		// PW 에디트 커스텀 프로시저
 
 // 화면처리 관련 변수////////////////////////////////////////
 
@@ -124,7 +125,8 @@ LRESULT CALLBACK MainWndProc(HWND hWnd, UINT iMessage, WPARAM wParam, LPARAM lPa
 
 		// 서버에 연결
 		Connect_Server();
-		
+		Send_Text("CFF", "0");	// 초기 접속
+
 		//////////////////////////////////////////////////////////////////////////////////////////
 
 		// ID / PW 입력창 만들기
@@ -337,6 +339,9 @@ LRESULT CALLBACK EditOnlyAlphaNumProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM
 	else if (hWnd == GetDlgItem(hWndJoin, IDC_JOIN_EDIT_PW)) {
 		return CallWindowProc(Edit_PW_Proc, hWnd, msg, wParam, lParam);
 	}
+	else if (hWnd == GetDlgItem(hWndJoin, IDC_JOIN_CHK_EDIT_PW)) {
+		return CallWindowProc(Edit_Phone_Chk_Proc, hWnd, msg, wParam, lParam);
+	}
 	else {
 		return DefWindowProc(hWnd, msg, wParam, lParam); // fallback
 	}
@@ -413,26 +418,116 @@ BOOL CALLBACK Find_PW_DlgProc(HWND hDlg, UINT iMessage, WPARAM wParam, LPARAM lP
 
 
 BOOL CALLBACK Join_DlgProc(HWND hDlg, UINT iMessage, WPARAM wParam, LPARAM lParam) {
-	
+	HBITMAP hBmp;
+	static BOOL PW_SHOW_HIDE;
+	static HWND hBtn_PW, hEdit_ID, hEdit_PW, hEdit_PW_CHK, hEdit_Phone, hCheck_Quick;
+	static TCHAR hID[30], hPW[30], hPW_CHK[30], hPhone[12], Join_Info[80];
+
 	switch (iMessage) {
 	case WM_INITDIALOG:
 		hWndJoin = hDlg;
-		SendMessage(GetDlgItem(hDlg, IDC_JOIN_EDIT_PNUM), EM_LIMITTEXT, (WPARAM)11, 0);
+		
+		hEdit_ID = GetDlgItem(hDlg, IDC_JOIN_EDIT_ID);
+		hBtn_PW = GetDlgItem(hDlg, IDC_BTN_PW_STATE);
+		hEdit_PW = GetDlgItem(hDlg, IDC_JOIN_EDIT_PW);
+		hEdit_PW_CHK = GetDlgItem(hDlg, IDC_JOIN_CHK_EDIT_PW);
+		hEdit_Phone = GetDlgItem(hDlg, IDC_JOIN_EDIT_PNUM);
+		hCheck_Quick = GetDlgItem(hDlg, IDC_CHECK_QUICK_LOGIN);
+		hBmp = LoadBitmap(g_hInst, MAKEINTRESOURCE(IDB_PW_NO));
+		PW_SHOW_HIDE = FALSE;
+
+		EnableWindow(hEdit_ID, TRUE);
+		EnableWindow(hCheck_Quick, FALSE);
+		EnableWindow(GetDlgItem(hDlg, IDC_BTN_JOIN_OK), FALSE);
+
+		SendMessage(hEdit_Phone, EM_LIMITTEXT, (WPARAM)11, 0);
+		SendMessage(hBtn_PW, BM_SETIMAGE, IMAGE_BITMAP, (LPARAM)hBmp);
+		SendMessage(hEdit_PW, EM_SETPASSWORDCHAR, (WPARAM)'*', 0);
+		SendMessage(hEdit_PW_CHK, EM_SETPASSWORDCHAR, (WPARAM)'*', 0);
+
+		SendMessage(hCheck_Quick, BM_SETCHECK, BST_CHECKED, 0);
 
 		// 서브클래싱
-		Edit_ID_Proc = (WNDPROC)SetWindowLongPtr(GetDlgItem(hDlg, IDC_JOIN_EDIT_ID), GWLP_WNDPROC, (LONG_PTR)EditOnlyAlphaNumProc);
-		Edit_PW_Proc = (WNDPROC)SetWindowLongPtr(GetDlgItem(hDlg, IDC_JOIN_EDIT_PW), GWLP_WNDPROC, (LONG_PTR)EditOnlyAlphaNumProc);
-		Edit_Phone_Proc = (WNDPROC)SetWindowLongPtr(GetDlgItem(hDlg, IDC_JOIN_EDIT_PNUM), GWLP_WNDPROC, (LONG_PTR)EditOnlyNumProc);
-
+		Edit_ID_Proc = (WNDPROC)SetWindowLongPtr(hEdit_ID, GWLP_WNDPROC, (LONG_PTR)EditOnlyAlphaNumProc);
+		Edit_PW_Proc = (WNDPROC)SetWindowLongPtr(hEdit_PW, GWLP_WNDPROC, (LONG_PTR)EditOnlyAlphaNumProc);
+		Edit_Phone_Chk_Proc = (WNDPROC)SetWindowLongPtr(hEdit_PW_CHK, GWLP_WNDPROC, (LONG_PTR)EditOnlyAlphaNumProc);
+		Edit_Phone_Proc = (WNDPROC)SetWindowLongPtr(hEdit_Phone, GWLP_WNDPROC, (LONG_PTR)EditOnlyNumProc);
+		
 		return TRUE;
 	case WM_COMMAND:
 		switch (LOWORD(wParam)) {
-		case IDOK:
-			EndDialog(hDlg, IDOK);
+		case IDC_BTN_JOIN_OK:
+			if (lstrcmp(hID, "") != 0) {
+				GetWindowText(hEdit_PW, hPW, 30);
+				if (lstrcmp(hPW, "") != 0) {
+					GetWindowText(hEdit_PW_CHK, hPW_CHK, 30);
+					if (lstrcmp(hPW, hPW_CHK) == 0) {
+						GetWindowText(hEdit_Phone, hPhone, 12);
+						if (lstrcmp(hPhone, "") != 0) {
+							lstrcpy(Join_Info, hID);
+							lstrcat(Join_Info, "-");
+							lstrcat(Join_Info, hPW);
+							lstrcat(Join_Info, "-");
+							lstrcat(Join_Info, hPhone);
+
+							Send_Text("C03", Join_Info);
+						}
+						else {
+							MessageBox(hDlg, "핸드폰번호를 입력해주세요", "알림", MB_OK);
+						}
+					}
+					else {
+						MessageBox(hDlg, "비밀번호가 잘못되었습니다 다시 입력해주세요", "알림", MB_OK);
+						SetWindowText(hEdit_PW_CHK, "");
+						lstrcpy(hPW_CHK, "");
+					}
+				}
+				else {
+					MessageBox(hDlg, "비밀번호를 입력해주세요", "알림", MB_OK);
+				}
+			}
+			else {
+				MessageBox(hDlg, "아이디를 입력해주세요", "알림", MB_OK);
+			}
+			
 			return TRUE;
 		case IDCANCEL:
 			EndDialog(hDlg, IDCANCEL);
 			return TRUE;
+		case IDC_BTN_PW_STATE:
+			if (PW_SHOW_HIDE != TRUE) {
+				// 비밀번호 보이게
+				hBmp = LoadBitmap(g_hInst, MAKEINTRESOURCE(IDB_PW_YES));
+				SendMessage(hBtn_PW, BM_SETIMAGE, IMAGE_BITMAP, (LPARAM)hBmp);
+
+				SendMessage(hEdit_PW, EM_SETPASSWORDCHAR, (WPARAM)0, 0);
+				SendMessage(hEdit_PW_CHK, EM_SETPASSWORDCHAR, (WPARAM)0, 0);
+
+				PW_SHOW_HIDE = TRUE;
+			}
+			else {
+				// 비밀번호 안보이게
+				hBmp = LoadBitmap(g_hInst, MAKEINTRESOURCE(IDB_PW_NO));
+				SendMessage(hBtn_PW, BM_SETIMAGE, IMAGE_BITMAP, (LPARAM)hBmp);
+
+				SendMessage(hEdit_PW, EM_SETPASSWORDCHAR, (WPARAM)'*', 0);
+				SendMessage(hEdit_PW_CHK, EM_SETPASSWORDCHAR, (WPARAM)'*', 0);
+
+				PW_SHOW_HIDE = FALSE;
+			}
+
+			InvalidateRect(hEdit_PW, NULL, TRUE);
+			InvalidateRect(hEdit_PW_CHK, NULL, TRUE);
+			break;
+		case IDC_BTN_CHECK_ID:
+			GetWindowText(hEdit_ID, hID, 30);
+			if (lstrcmp(hID, "") != 0) {
+				Send_Text("C07", hID);
+			}
+			else {
+				MessageBox(hDlg, "아이디를 입력해주세요", "알림", MB_OK);
+			}
+			break;
 		default:
 			if ((199 < LOWORD(wParam)) && (LOWORD(wParam) < 230)) {
 		
@@ -497,6 +592,7 @@ CODE:
 	S04 = 좌석 리스트 메시지
 	S05 = 좌석 선점 성공/실패 메시지
 	S06 = 좌석 선택에서 요금 충전
+
 	---------------(Client)---------------
 	C00 = 로그인 요청 메시지
 	C01 = ID 찾기 요청 메시지
@@ -516,7 +612,6 @@ DWORD WINAPI Recv_Thread(LPVOID Param) {
 
 	for (;;) {
 		// 접속 허용하기 (소켓 객체, 클라이언트 주소 정보, 주소 정보 구조 크기)
-
 		nReturn = recv(*P, buf, 1024, 0);
 
 		if (nReturn != 0 && nReturn != SOCKET_ERROR) {
@@ -524,7 +619,7 @@ DWORD WINAPI Recv_Thread(LPVOID Param) {
 
 			if (lstrcmp(CODE, "S00") == 0) {
 				// 로그인 성공/실패 여부
-				if (lstrcmp(TEXT, "SUCCESS") == 0) {
+				if (lstrcmp(TEXT, "FAIL") != 0) {
 					// 결제화면인 PricePage로 Screen 세팅
 					View_State = PRICEPAGE;
 					Change_Screen();
@@ -542,11 +637,21 @@ DWORD WINAPI Recv_Thread(LPVOID Param) {
 			}
 			else if (lstrcmp(CODE, "S03") == 0) {
 				// 회원가입 성공/실패 여부
-				if (lstrcmp(TEXT, "SUCCESS") == 0) {
-					MessageBox(hWndMain, "success", "!", MB_OK);
+				if (lstrcmp(TEXT, "JOIN SUCCESS") == 0) {
+					MessageBox(hWndJoin, "회원가입이 완료 되었습니다.", "알림", MB_OK);
+					if (SendMessage(GetDlgItem(hWndJoin, IDC_CHECK_QUICK_LOGIN), BM_GETCHECK, 0, 0) == BST_CHECKED) {
+						//Send_Text("C00",
+					}
+					EndDialog(hWndJoin, IDOK);
 				}
-				else {
-					MessageBox(hWndMain, "fail", "알림", MB_OK);
+				else if(lstrcmp(TEXT,"JOIN FAIL") == 0) {
+					MessageBox(hWndJoin, "회원가입 실패 카운터에 문의하세요", "알림", MB_OK);
+				}
+				else if (lstrcmp(TEXT, "PHONE DUP") == 0) {
+					MessageBox(hWndJoin, "이미 가입된 아이디가 존재합니다.\n 아이디 찾기 기능을 이용해주세요.", "알림", MB_OK);
+				}
+				else if (lstrcmp(TEXT, "ID DUP") == 0) {
+					MessageBox(hWndJoin, "중복된 아이디가 존재합니다. \n 다른 아이디를 사용해 주세요", "알림", MB_OK);
 				}
 			}
 			else if (lstrcmp(CODE, "S04") == 0) {
@@ -564,6 +669,20 @@ DWORD WINAPI Recv_Thread(LPVOID Param) {
 			}
 			else if (lstrcmp(CODE, "S06") == 0) {
 				// 계정에 요금충전
+			}
+			else if (lstrcmp(CODE, "S07") == 0) {
+				if (lstrcmp(TEXT, "ID AV") == 0) {
+					MessageBox(hWndMain, "사용가능한 ID입니다.", "알림", MB_OK);
+					EnableWindow(GetDlgItem(hWndJoin, IDC_BTN_JOIN_OK), TRUE);
+					EnableWindow(GetDlgItem(hWndJoin, IDC_JOIN_EDIT_ID), FALSE);
+					EnableWindow(GetDlgItem(hWndJoin, IDC_CHECK_QUICK_LOGIN), TRUE);
+				}
+				else {
+					MessageBox(hWndMain, "이미 존재하는 아이디입니다.", "알림", MB_OK);
+				}
+			}
+			else if (lstrcmp(CODE, "S08") == 0) {
+				MessageBox(hWndMain, "시간 초과", "알림", MB_OK);
 			}
 		}
 		else {
@@ -725,8 +844,8 @@ void SetHangulMode(HWND hWnd, BOOL bHangulOn) {
 
 
 /*--------------------------------------------------------
- Send_Text(const char*, const char*, SOCKET*): 서버로
- 텍스트 송신하는 함수
+ Send_Text(const char*, const char*): 서버로 텍스트 
+ 송신하는 함수
 --------------------------------------------------------*/
 void Send_Text(const char* code, const char* Text) {
 	TCHAR S_TEXT[300];
@@ -756,6 +875,14 @@ void Send_Text(const char* code, const char* Text) {
 		nReturn = send(clientsock, S_TEXT, sizeof(S_TEXT), 0);
 	}
 	else if (lstrcmp(code, "C06") == 0) {
+		wsprintf(S_TEXT, "%s-%s", code, Text);
+		nReturn = send(clientsock, S_TEXT, sizeof(S_TEXT), 0);
+	}
+	else if (lstrcmp(code, "C07") == 0) {
+		wsprintf(S_TEXT, "%s-%s", code, Text);
+		nReturn = send(clientsock, S_TEXT, sizeof(S_TEXT), 0);
+	}
+	else if (lstrcmp(code, "CFF") == 0) {
 		wsprintf(S_TEXT, "%s-%s", code, Text);
 		nReturn = send(clientsock, S_TEXT, sizeof(S_TEXT), 0);
 	}

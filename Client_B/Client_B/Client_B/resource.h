@@ -8,6 +8,8 @@
 #define IDD_DLG_FIND_PW                 106
 #define IDD_DLG_INIT_PW                 106
 #define IDD_DLG_JOIN                    108
+#define IDB_PW_YES                      111
+#define IDB_PW_NO                       112
 #define IDC_BTN_SEAT1                   200
 #define IDC_BTN_SEAT2                   201
 #define IDC_BTN_SEAT3                   202
@@ -48,16 +50,19 @@
 #define IDC_JOIN_EDIT_ID                1007
 #define IDC_JOIN_EDIT_PNUM              1008
 #define IDC_ID_STATIC                   1009
-#define IDC_BUTTON1                     1009
-#define IDC_BUTTON2                     1010
+#define IDC_JOIN_CHK_EDIT_PW            1009
+#define IDC_BTN_PW_STATE                1010
+#define IDC_BTN_CHECK_ID                1011
+#define IDC_BTN_JOIN_OK                 1012
+#define IDC_CHECK_QUICK_LOGIN           1013
 
 // Next default values for new objects
 // 
 #ifdef APSTUDIO_INVOKED
 #ifndef APSTUDIO_READONLY_SYMBOLS
-#define _APS_NEXT_RESOURCE_VALUE        110
+#define _APS_NEXT_RESOURCE_VALUE        113
 #define _APS_NEXT_COMMAND_VALUE         40001
-#define _APS_NEXT_CONTROL_VALUE         1011
+#define _APS_NEXT_CONTROL_VALUE         1014
 #define _APS_NEXT_SYMED_VALUE           101
 #endif
 #endif
